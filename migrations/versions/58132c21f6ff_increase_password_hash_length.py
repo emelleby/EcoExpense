@@ -64,10 +64,12 @@ def downgrade():
         sa.Column('trip_id', sa.Integer(), nullable=True),
         sa.Column('project_id', sa.Integer(), nullable=True),
         sa.Column('category_id', sa.Integer(), nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(['category_id'], ['expense_category.id'], ),
         sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
         sa.ForeignKeyConstraint(['supplier_id'], ['supplier.id'], ),
         sa.ForeignKeyConstraint(['trip_id'], ['trip.id'], ),
+        sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
 
