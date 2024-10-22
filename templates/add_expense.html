@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Add New Expense</h1>
+<form method="POST" action="{{ url_for('add_expense') }}">
+    <div class="mb-3">
+        <label for="amount" class="form-label">Amount</label>
+        <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
+    </div>
+    <div class="mb-3">
+        <label for="date" class="form-label">Date</label>
+        <input type="date" class="form-control" id="date" name="date" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="supplier" class="form-label">Supplier</label>
+        <select class="form-select" id="supplier" name="supplier" required>
+            {% for supplier in suppliers %}
+            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="category" class="form-label">Category</label>
+        <select class="form-select" id="category" name="category" required>
+            {% for category in categories %}
+            <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="trip" class="form-label">Trip (Optional)</label>
+        <select class="form-select" id="trip" name="trip">
+            <option value="">Select a trip</option>
+            {% for trip in trips %}
+            <option value="{{ trip.id }}">{{ trip.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="project" class="form-label">Project (Optional)</label>
+        <select class="form-select" id="project" name="project">
+            <option value="">Select a project</option>
+            {% for project in projects %}
+            <option value="{{ project.id }}">{{ project.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Add Expense</button>
+</form>
+{% endblock %}

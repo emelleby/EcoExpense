@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Projects</h1>
+<form method="POST" action="{{ url_for('projects') }}" class="mb-4">
+    <h2 class="h4 mb-3">Add New Project</h2>
+    <div class="mb-3">
+        <label for="name" class="form-label">Name</label>
+        <input type="text" class="form-control" id="name" name="name" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Add Project</button>
+</form>
+
+<h2 class="h4 mb-3">Projects List</h2>
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+            <tr>
+                <td>{{ project.name }}</td>
+                <td>{{ project.description }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
