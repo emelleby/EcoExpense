@@ -1,4 +1,4 @@
-"""Increase password_hash length and recreate expense table
+"""Increase password_hash length and update expense table
 
 Revision ID: 58132c21f6ff
 Revises: 
@@ -17,31 +17,6 @@ depends_on = None
 
 
 def upgrade():
-    # Drop the existing expense table
-    op.drop_table('expense')
-
-    # Recreate the expense table with the new schema
-    op.create_table('expense',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('amount', sa.Float(), nullable=False),
-        sa.Column('currency', sa.String(length=3), nullable=False),
-        sa.Column('exchange_rate', sa.Float(), nullable=False),
-        sa.Column('nok_amount', sa.Float(), nullable=False),
-        sa.Column('date', sa.Date(), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('supplier_id', sa.Integer(), nullable=False),
-        sa.Column('trip_id', sa.Integer(), nullable=True),
-        sa.Column('project_id', sa.Integer(), nullable=True),
-        sa.Column('category_id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['category_id'], ['expense_category.id'], ),
-        sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-        sa.ForeignKeyConstraint(['supplier_id'], ['supplier.id'], ),
-        sa.ForeignKeyConstraint(['trip_id'], ['trip.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
-
     # Increase password_hash length in the user table
     with op.batch_alter_table('user', schema=None) as batch_op:
         batch_op.alter_column('password_hash',
@@ -49,29 +24,28 @@ def upgrade():
                type_=sa.String(length=255),
                existing_nullable=True)
 
+    # Add new columns to the expense table as nullable
+    with op.batch_alter_table('expense', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('currency', sa.String(length=3), nullable=True))
+        batch_op.add_column(sa.Column('exchange_rate', sa.Float(), nullable=True))
+        batch_op.add_column(sa.Column('nok_amount', sa.Float(), nullable=True))
+
+    # Update existing rows with default values
+    op.execute("UPDATE expense SET currency = 'NOK', exchange_rate = 1.0, nok_amount = amount WHERE currency IS NULL")
+
+    # Add NOT NULL constraints
+    with op.batch_alter_table('expense', schema=None) as batch_op:
+        batch_op.alter_column('currency', nullable=False)
+        batch_op.alter_column('exchange_rate', nullable=False)
+        batch_op.alter_column('nok_amount', nullable=False)
+
 
 def downgrade():
-    # Drop the recreated expense table
-    op.drop_table('expense')
-
-    # Recreate the original expense table (without new columns)
-    op.create_table('expense',
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('amount', sa.Float(), nullable=False),
-        sa.Column('date', sa.Date(), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('supplier_id', sa.Integer(), nullable=False),
-        sa.Column('trip_id', sa.Integer(), nullable=True),
-        sa.Column('project_id', sa.Integer(), nullable=True),
-        sa.Column('category_id', sa.Integer(), nullable=False),
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['category_id'], ['expense_category.id'], ),
-        sa.ForeignKeyConstraint(['project_id'], ['project.id'], ),
-        sa.ForeignKeyConstraint(['supplier_id'], ['supplier.id'], ),
-        sa.ForeignKeyConstraint(['trip_id'], ['trip.id'], ),
-        sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
-        sa.PrimaryKeyConstraint('id')
-    )
+    # Remove new columns from the expense table
+    with op.batch_alter_table('expense', schema=None) as batch_op:
+        batch_op.drop_column('nok_amount')
+        batch_op.drop_column('exchange_rate')
+        batch_op.drop_column('currency')
 
     # Revert password_hash length in the user table
     with op.batch_alter_table('user', schema=None) as batch_op:

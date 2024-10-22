@@ -67,6 +67,7 @@ def add_expense():
         amount = float(request.form['amount'])
         currency = request.form['currency']
         exchange_rate = float(request.form['exchange_rate'])
+        nok_amount = amount * exchange_rate
         date = datetime.strptime(request.form['date'], '%Y-%m-%d')
         description = request.form['description']
         category_id = request.form['category']
@@ -74,7 +75,7 @@ def add_expense():
         project_id = request.form['project'] if request.form['project'] != '' else None
 
         new_expense = Expense(amount=amount, currency=currency, exchange_rate=exchange_rate,
-                              date=date, description=description,
+                              nok_amount=nok_amount, date=date, description=description,
                               supplier_id=supplier_id, category_id=category_id,
                               user_id=current_user.id, trip_id=trip_id, project_id=project_id)
         db.session.add(new_expense)
