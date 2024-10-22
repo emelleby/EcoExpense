@@ -27,8 +27,8 @@ def upgrade():
     # Add user_id column to expense table
     with op.batch_alter_table('expense', schema=None) as batch_op:
         batch_op.add_column(sa.Column('user_id', sa.Integer(), nullable=True))
-        batch_op.add_column(sa.Column('currency', sa.String(length=3), nullable=True, server_default='USD'))
-        batch_op.add_column(sa.Column('exchange_rate', sa.Float(), nullable=True, server_default='1.0'))
+        batch_op.add_column(sa.Column('currency', sa.String(length=3), nullable=True))
+        batch_op.add_column(sa.Column('exchange_rate', sa.Float(), nullable=True))
         batch_op.add_column(sa.Column('nok_amount', sa.Float(), nullable=True))
 
     # Create a default user if not exists
@@ -36,7 +36,9 @@ def upgrade():
 
     # Set default user_id for existing expenses
     op.execute("UPDATE expense SET user_id = (SELECT id FROM \"user\" ORDER BY id LIMIT 1) WHERE user_id IS NULL")
-    op.execute("UPDATE expense SET nok_amount = amount WHERE nok_amount IS NULL")
+    
+    # Set default values for new columns in existing rows
+    op.execute("UPDATE expense SET currency = 'NOK', exchange_rate = 1.0, nok_amount = amount WHERE currency IS NULL")
 
     # Make user_id non-nullable and add foreign key constraint
     with op.batch_alter_table('expense', schema=None) as batch_op:
