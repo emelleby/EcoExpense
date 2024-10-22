@@ -1,6 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask_login import login_user, login_required, logout_user, current_user
 from app import app, db
-from models import Supplier, Trip, Project, ExpenseCategory, Expense
+from models import User, Supplier, Trip, Project, ExpenseCategory, Expense
 from datetime import datetime
 from sqlalchemy import func
 
@@ -8,7 +9,58 @@ from sqlalchemy import func
 def index():
     return render_template('index.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        
+        user = User.query.filter_by(username=username).first()
+        if user:
+            flash('Username already exists', 'danger')
+            return redirect(url_for('register'))
+        
+        user = User.query.filter_by(email=email).first()
+        if user:
+            flash('Email already exists', 'danger')
+            return redirect(url_for('register'))
+        
+        new_user = User(username=username, email=email)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        flash('Registration successful. Please log in.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            flash('Logged in successfully.', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'danger')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('index'))
+
 @app.route('/add_expense', methods=['GET', 'POST'])
+@login_required
 def add_expense():
     if request.method == 'POST':
         supplier_id = request.form['supplier']
@@ -21,7 +73,7 @@ def add_expense():
 
         new_expense = Expense(amount=amount, date=date, description=description,
                               supplier_id=supplier_id, category_id=category_id,
-                              trip_id=trip_id, project_id=project_id)
+                              user_id=current_user.id, trip_id=trip_id, project_id=project_id)
         db.session.add(new_expense)
         db.session.commit()
         flash('Expense added successfully!', 'success')
@@ -35,11 +87,13 @@ def add_expense():
                            trips=trips, projects=projects)
 
 @app.route('/expenses')
+@login_required
 def expenses_list():
-    expenses = Expense.query.order_by(Expense.date.desc()).all()
+    expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
     return render_template('expenses_list.html', expenses=expenses)
 
 @app.route('/suppliers', methods=['GET', 'POST'])
+@login_required
 def suppliers():
     if request.method == 'POST':
         name = request.form['name']
@@ -54,6 +108,7 @@ def suppliers():
     return render_template('suppliers.html', suppliers=suppliers_list)
 
 @app.route('/trips', methods=['GET', 'POST'])
+@login_required
 def trips():
     if request.method == 'POST':
         name = request.form['name']
@@ -69,6 +124,7 @@ def trips():
     return render_template('trips.html', trips=trips_list)
 
 @app.route('/projects', methods=['GET', 'POST'])
+@login_required
 def projects():
     if request.method == 'POST':
         name = request.form['name']
@@ -83,24 +139,27 @@ def projects():
     return render_template('projects.html', projects=projects_list)
 
 @app.route('/expense_analysis')
+@login_required
 def expense_analysis():
     return render_template('expense_analysis.html')
 
 @app.route('/api/supplier_expenses')
+@login_required
 def supplier_expenses():
     supplier_expenses = db.session.query(
         Supplier.name,
         func.sum(Expense.amount).label('total_amount')
-    ).join(Expense).group_by(Supplier.id).all()
+    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(Supplier.id).all()
     
     return jsonify([{'name': se.name, 'total_amount': float(se.total_amount)} for se in supplier_expenses])
 
 @app.route('/api/category_expenses')
+@login_required
 def category_expenses():
     category_expenses = db.session.query(
         ExpenseCategory.name,
         func.sum(Expense.amount).label('total_amount')
-    ).join(Expense).group_by(ExpenseCategory.id).all()
+    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(ExpenseCategory.id).all()
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
 
