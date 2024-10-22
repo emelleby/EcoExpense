@@ -1,7 +1,8 @@
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, jsonify
 from app import app, db
 from models import Supplier, Trip, Project, ExpenseCategory, Expense
 from datetime import datetime
+from sqlalchemy import func
 
 @app.route('/')
 def index():
@@ -80,6 +81,28 @@ def projects():
 
     projects_list = Project.query.all()
     return render_template('projects.html', projects=projects_list)
+
+@app.route('/expense_analysis')
+def expense_analysis():
+    return render_template('expense_analysis.html')
+
+@app.route('/api/supplier_expenses')
+def supplier_expenses():
+    supplier_expenses = db.session.query(
+        Supplier.name,
+        func.sum(Expense.amount).label('total_amount')
+    ).join(Expense).group_by(Supplier.id).all()
+    
+    return jsonify([{'name': se.name, 'total_amount': float(se.total_amount)} for se in supplier_expenses])
+
+@app.route('/api/category_expenses')
+def category_expenses():
+    category_expenses = db.session.query(
+        ExpenseCategory.name,
+        func.sum(Expense.amount).label('total_amount')
+    ).join(Expense).group_by(ExpenseCategory.id).all()
+    
+    return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
 
 def create_default_categories():
     categories = ['Car Travel', 'Accommodation', 'Fuel Expenses', 'Food', 'Misc']
