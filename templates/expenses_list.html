@@ -8,6 +8,7 @@
             <tr>
                 <th>Date</th>
                 <th>Amount</th>
+                <th>Currency</th>
                 <th>Description</th>
                 <th>Supplier</th>
                 <th>Category</th>
@@ -19,7 +20,8 @@
             {% for expense in expenses %}
             <tr>
                 <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
-                <td>${{ "%.2f"|format(expense.amount) }}</td>
+                <td>{{ "%.2f"|format(expense.amount) }}</td>
+                <td>{{ expense.currency }}</td>
                 <td>{{ expense.description }}</td>
                 <td>{{ expense.supplier.name }}</td>
                 <td>{{ expense.category.name }}</td>

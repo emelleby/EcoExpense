@@ -65,13 +65,14 @@ def add_expense():
     if request.method == 'POST':
         supplier_id = request.form['supplier']
         amount = float(request.form['amount'])
+        currency = request.form['currency']
         date = datetime.strptime(request.form['date'], '%Y-%m-%d')
         description = request.form['description']
         category_id = request.form['category']
         trip_id = request.form['trip'] if request.form['trip'] != '' else None
         project_id = request.form['project'] if request.form['project'] != '' else None
 
-        new_expense = Expense(amount=amount, date=date, description=description,
+        new_expense = Expense(amount=amount, currency=currency, date=date, description=description,
                               supplier_id=supplier_id, category_id=category_id,
                               user_id=current_user.id, trip_id=trip_id, project_id=project_id)
         db.session.add(new_expense)
@@ -83,8 +84,9 @@ def add_expense():
     categories = ExpenseCategory.query.all()
     trips = Trip.query.all()
     projects = Project.query.all()
+    currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
     return render_template('add_expense.html', suppliers=suppliers, categories=categories,
-                           trips=trips, projects=projects)
+                           trips=trips, projects=projects, currencies=currencies)
 
 @app.route('/expenses')
 @login_required

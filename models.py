@@ -59,6 +59,7 @@ class ExpenseCategory(db.Model):
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), nullable=False, default='USD')
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     description = db.Column(db.Text)
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
@@ -67,8 +68,9 @@ class Expense(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('expense_category.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    def __init__(self, amount, date, description, supplier_id, category_id, user_id, trip_id=None, project_id=None):
+    def __init__(self, amount, currency, date, description, supplier_id, category_id, user_id, trip_id=None, project_id=None):
         self.amount = amount
+        self.currency = currency
         self.date = date
         self.description = description
         self.supplier_id = supplier_id
