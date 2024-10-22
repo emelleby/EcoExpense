@@ -9,6 +9,8 @@
                 <th>Date</th>
                 <th>Amount</th>
                 <th>Currency</th>
+                <th>Exchange Rate</th>
+                <th>NOK Amount</th>
                 <th>Description</th>
                 <th>Supplier</th>
                 <th>Category</th>
@@ -22,6 +24,8 @@
                 <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
                 <td>{{ "%.2f"|format(expense.amount) }}</td>
                 <td>{{ expense.currency }}</td>
+                <td>{{ "%.4f"|format(expense.exchange_rate) }}</td>
+                <td>{{ "%.2f"|format(expense.nok_amount) }}</td>
                 <td>{{ expense.description }}</td>
                 <td>{{ expense.supplier.name }}</td>
                 <td>{{ expense.category.name }}</td>

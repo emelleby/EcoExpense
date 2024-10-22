@@ -66,13 +66,15 @@ def add_expense():
         supplier_id = request.form['supplier']
         amount = float(request.form['amount'])
         currency = request.form['currency']
+        exchange_rate = float(request.form['exchange_rate'])
         date = datetime.strptime(request.form['date'], '%Y-%m-%d')
         description = request.form['description']
         category_id = request.form['category']
         trip_id = request.form['trip'] if request.form['trip'] != '' else None
         project_id = request.form['project'] if request.form['project'] != '' else None
 
-        new_expense = Expense(amount=amount, currency=currency, date=date, description=description,
+        new_expense = Expense(amount=amount, currency=currency, exchange_rate=exchange_rate,
+                              date=date, description=description,
                               supplier_id=supplier_id, category_id=category_id,
                               user_id=current_user.id, trip_id=trip_id, project_id=project_id)
         db.session.add(new_expense)
@@ -84,7 +86,7 @@ def add_expense():
     categories = ExpenseCategory.query.all()
     trips = Trip.query.all()
     projects = Project.query.all()
-    currencies = ['USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
+    currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
     return render_template('add_expense.html', suppliers=suppliers, categories=categories,
                            trips=trips, projects=projects, currencies=currencies)
 
@@ -150,7 +152,7 @@ def expense_analysis():
 def supplier_expenses():
     supplier_expenses = db.session.query(
         Supplier.name,
-        func.sum(Expense.amount).label('total_amount')
+        func.sum(Expense.nok_amount).label('total_amount')
     ).join(Expense).filter(Expense.user_id == current_user.id).group_by(Supplier.id).all()
     
     return jsonify([{'name': se.name, 'total_amount': float(se.total_amount)} for se in supplier_expenses])
@@ -160,7 +162,7 @@ def supplier_expenses():
 def category_expenses():
     category_expenses = db.session.query(
         ExpenseCategory.name,
-        func.sum(Expense.amount).label('total_amount')
+        func.sum(Expense.nok_amount).label('total_amount')
     ).join(Expense).filter(Expense.user_id == current_user.id).group_by(ExpenseCategory.id).all()
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
