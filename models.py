@@ -70,11 +70,11 @@ class Expense(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('expense_category.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    def __init__(self, amount, currency, exchange_rate, date, description, supplier_id, category_id, user_id, trip_id=None, project_id=None):
+    def __init__(self, amount, currency, exchange_rate, nok_amount, date, description, supplier_id, category_id, user_id, trip_id=None, project_id=None):
         self.amount = amount
         self.currency = currency
         self.exchange_rate = exchange_rate
-        self.nok_amount = amount * exchange_rate
+        self.nok_amount = nok_amount
         self.date = date
         self.description = description
         self.supplier_id = supplier_id
