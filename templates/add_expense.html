@@ -9,7 +9,11 @@
     </div>
     <div class="mb-3">
         <label for="currency" class="form-label">Currency</label>
-        <input type="text" class="form-control" id="currency" name="currency" required>
+        <select class="form-select" id="currency" name="currency" required>
+            {% for currency in currencies %}
+            <option value="{{ currency }}">{{ currency }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="mb-3">
         <label for="exchange_rate" class="form-label">Exchange Rate (to NOK)</label>

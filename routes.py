@@ -96,6 +96,19 @@ def expenses_list():
     expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
     return render_template('expenses_list.html', expenses=expenses)
 
+@app.route('/delete_expense/<int:expense_id>', methods=['POST'])
+@login_required
+def delete_expense(expense_id):
+    expense = Expense.query.get_or_404(expense_id)
+    if expense.user_id != current_user.id:
+        flash('You are not authorized to delete this expense.', 'danger')
+        return redirect(url_for('expenses_list'))
+    
+    db.session.delete(expense)
+    db.session.commit()
+    flash('Expense deleted successfully.', 'success')
+    return redirect(url_for('expenses_list'))
+
 @app.route('/suppliers', methods=['GET', 'POST'])
 @login_required
 def suppliers():
@@ -175,7 +188,6 @@ def create_default_categories():
             db.session.add(new_category)
     db.session.commit()
 
-# This function will be called in app.py to create default categories
 def init_app(app):
     with app.app_context():
         create_default_categories()
