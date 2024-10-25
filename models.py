@@ -3,12 +3,36 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
+class Organization(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    users = db.relationship('User', backref='organization', lazy='dynamic')
+
+    def __init__(self, name, description=None):
+        self.name = name
+        self.description = description
+
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+    def __init__(self, name, organization_id):
+        self.name = name
+        self.organization_id = organization_id
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(255))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
     expenses = db.relationship('Expense', backref='user', lazy='dynamic')
+    is_admin = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
