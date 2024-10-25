@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_user, login_required, logout_user, current_user
 from app import app, db
 from models import User, Supplier, Trip, Project, ExpenseCategory, Expense, Organization, Role
@@ -17,9 +17,14 @@ def register():
         password = request.form['password']
         organization_id = request.form.get('organization')
         
-        if not organization_id:
-            flash('Please select an organization', 'danger')
-            return redirect(url_for('register'))
+        if organization_id == "new":
+            # Store registration data in session
+            session['registration_data'] = {
+                'username': username,
+                'email': email,
+                'password': password
+            }
+            return redirect(url_for('create_organization'))
         
         user = User.query.filter_by(username=username).first()
         if user:
@@ -42,7 +47,11 @@ def register():
             db.session.add(default_role)
             db.session.commit()
         
-        new_user = User(username=username, email=email, organization_id=organization_id, role_id=default_role.id)
+        new_user = User()
+        new_user.username = username
+        new_user.email = email
+        new_user.organization_id = organization_id
+        new_user.role_id = default_role.id
         new_user.set_password(password)
         db.session.add(new_user)
         db.session.commit()
@@ -52,6 +61,49 @@ def register():
     
     organizations = Organization.query.all()
     return render_template('register.html', organizations=organizations)
+
+@app.route('/create_organization', methods=['GET', 'POST'])
+def create_organization():
+    if 'registration_data' not in session:
+        flash('Please start registration first', 'danger')
+        return redirect(url_for('register'))
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+        
+        if Organization.query.filter_by(name=name).first():
+            flash('Organization name already exists', 'danger')
+            return redirect(url_for('create_organization'))
+        
+        # Create new organization
+        new_org = Organization(name=name, description=description)
+        db.session.add(new_org)
+        db.session.commit()
+        
+        # Create default roles
+        admin_role = Role(name='Admin', organization_id=new_org.id)
+        member_role = Role(name='Member', organization_id=new_org.id)
+        db.session.add(admin_role)
+        db.session.add(member_role)
+        db.session.commit()
+        
+        # Create user with admin role
+        reg_data = session.pop('registration_data')
+        new_user = User()
+        new_user.username = reg_data['username']
+        new_user.email = reg_data['email']
+        new_user.organization_id = new_org.id
+        new_user.role_id = admin_role.id
+        new_user.is_admin = True
+        new_user.set_password(reg_data['password'])
+        db.session.add(new_user)
+        db.session.commit()
+        
+        flash('Organization created and you have been registered as admin. Please log in.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('create_organization.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

@@ -18,14 +18,11 @@
     <div class="mb-3">
         <label for="organization" class="form-label">Organization</label>
         <select class="form-select" id="organization" name="organization" required>
-            <option value="">Select an organization</option>
+            <option value="new">None - I want to create a new organization</option>
             {% for org in organizations %}
             <option value="{{ org.id }}">{{ org.name }}</option>
             {% endfor %}
         </select>
-        <div class="form-text">
-            <a href="{{ url_for('organizations') }}">Create a new organization</a> if yours is not listed.
-        </div>
     </div>
     <button type="submit" class="btn btn-primary">Register</button>
 </form>
