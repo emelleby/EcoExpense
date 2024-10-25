@@ -190,14 +190,35 @@ def category_expenses():
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
 
-def create_default_categories():
-    categories = ['Car Travel', 'Accommodation', 'Fuel Expenses', 'Food', 'Misc']
-    for category_name in categories:
-        if not ExpenseCategory.query.filter_by(name=category_name).first():
-            new_category = ExpenseCategory(name=category_name)
-            db.session.add(new_category)
-    db.session.commit()
+@app.route('/expense_report', methods=['GET', 'POST'])
+@login_required
+def expense_report():
+    categories = ExpenseCategory.query.all()
+    projects = Project.query.all()
 
-def init_app(app):
-    with app.app_context():
-        create_default_categories()
+    if request.method == 'POST':
+        start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
+        end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d')
+        category_id = request.form.get('category')
+        project_id = request.form.get('project')
+
+        query = Expense.query.filter(
+            Expense.user_id == current_user.id,
+            Expense.date >= start_date,
+            Expense.date <= end_date
+        )
+
+        if category_id:
+            query = query.filter(Expense.category_id == category_id)
+        if project_id:
+            query = query.filter(Expense.project_id == project_id)
+
+        expenses = query.order_by(Expense.date).all()
+        total_amount = sum(expense.nok_amount for expense in expenses)
+
+        return render_template('expense_report.html', expenses=expenses, total_amount=total_amount,
+                               categories=categories, projects=projects, 
+                               start_date=start_date, end_date=end_date)
+
+    return render_template('expense_report.html', expenses=None, total_amount=None,
+                           categories=categories, projects=projects)

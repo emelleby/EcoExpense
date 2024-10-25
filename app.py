@@ -35,4 +35,3 @@ with app.app_context():
         return models.User.query.get(int(user_id))
 
 import routes
-routes.init_app(app)
