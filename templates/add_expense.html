@@ -30,12 +30,9 @@
         <textarea class="form-control" id="description" name="description" rows="3"></textarea>
     </div>
     <div class="mb-3">
-        <label for="supplier" class="form-label">Supplier</label>
-        <select class="form-select" id="supplier" name="supplier" required>
-            {% for supplier in suppliers %}
-            <option value="{{ supplier.id }}">{{ supplier.name }}</option>
-            {% endfor %}
-        </select>
+        <label for="supplier" class="form-label">Supplier Name</label>
+        <input type="text" class="form-control" id="supplier" name="supplier" required autocomplete="off">
+        <div class="form-text">Enter supplier name. If it doesn't exist, a new supplier will be created.</div>
     </div>
     <div class="mb-3">
         <label for="category" class="form-label">Category</label>

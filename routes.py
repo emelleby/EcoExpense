@@ -189,7 +189,19 @@ def manage_organization_roles(org_id):
 @login_required
 def add_expense():
     if request.method == 'POST':
-        supplier_id = request.form['supplier']
+        # Get the supplier name from the form
+        supplier_name = request.form['supplier'].strip()
+        
+        # Look for existing supplier (case-insensitive)
+        supplier = Supplier.query.filter(func.lower(Supplier.name) == func.lower(supplier_name)).first()
+        
+        # If supplier doesn't exist, create a new one
+        if not supplier:
+            supplier = Supplier(name=supplier_name, contact='')
+            db.session.add(supplier)
+            db.session.commit()
+        
+        # Process the rest of the expense data
         amount = float(request.form['amount'])
         currency = request.form['currency']
         exchange_rate = float(request.form['exchange_rate'])
@@ -207,7 +219,7 @@ def add_expense():
             nok_amount=nok_amount,
             date=date,
             description=description,
-            supplier_id=supplier_id,
+            supplier_id=supplier.id,
             category_id=category_id,
             user_id=current_user.id,
             trip_id=trip_id,
@@ -218,12 +230,11 @@ def add_expense():
         flash('Expense added successfully!', 'success')
         return redirect(url_for('expenses_list'))
 
-    suppliers = Supplier.query.all()
     categories = ExpenseCategory.query.all()
     trips = Trip.query.all()
     projects = Project.query.all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
-    return render_template('add_expense.html', suppliers=suppliers, categories=categories,
+    return render_template('add_expense.html', categories=categories,
                            trips=trips, projects=projects, currencies=currencies)
 
 @app.route('/expenses')
