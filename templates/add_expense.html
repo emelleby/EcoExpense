@@ -31,7 +31,8 @@
     </div>
     <div class="mb-3">
         <label for="supplier" class="form-label">Supplier Name</label>
-        <input type="text" class="form-control" id="supplier" name="supplier" required autocomplete="off">
+        <input type="text" class="form-control" id="supplier" name="supplier" list="supplier-list" required autocomplete="off">
+        <datalist id="supplier-list"></datalist>
         <div class="form-text">Enter supplier name. If it doesn't exist, a new supplier will be created.</div>
     </div>
     <div class="mb-3">
@@ -62,4 +63,18 @@
     </div>
     <button type="submit" class="btn btn-primary">Add Expense</button>
 </form>
+
+<script>
+document.getElementById('supplier').addEventListener('input', function(e) {
+    const input = e.target.value.toLowerCase();
+    if (input.length >= 2) {  // Only search when 2 or more characters are entered
+        fetch('/api/search_suppliers?q=' + encodeURIComponent(input))
+            .then(response => response.json())
+            .then(suppliers => {
+                const datalist = document.getElementById('supplier-list');
+                datalist.innerHTML = suppliers.map(s => `<option value="${s}">`).join('');
+            });
+    }
+});
+</script>
 {% endblock %}

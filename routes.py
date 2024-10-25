@@ -185,6 +185,13 @@ def manage_organization_roles(org_id):
     roles = Role.query.filter_by(organization_id=org_id).all()
     return render_template('manage_roles.html', organization=organization, roles=roles)
 
+@app.route('/api/search_suppliers')
+@login_required
+def search_suppliers():
+    query = request.args.get('q', '').lower()
+    suppliers = Supplier.query.filter(func.lower(Supplier.name).contains(query)).all()
+    return jsonify([s.name for s in suppliers])
+
 @app.route('/add_expense', methods=['GET', 'POST'])
 @login_required
 def add_expense():
