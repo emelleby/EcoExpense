@@ -4,7 +4,6 @@ from app import app, db
 from models import User, Supplier, Trip, Project, ExpenseCategory, Expense, Organization, Role
 from datetime import datetime
 from sqlalchemy import func, case
-# from sqlalchemy import case
 from utils import admin_required, same_organization_required
 
 @app.route('/')
@@ -269,7 +268,6 @@ def add_expense():
         flash('Expense added successfully!', 'success')
         return redirect(url_for('expenses'))
 
-    # categories = ExpenseCategory.query.all()
     categories = db.session.query(ExpenseCategory).order_by(
         case(
             (ExpenseCategory.name == 'Misc', 1),
@@ -291,7 +289,6 @@ def add_expense():
 def expenses():
     query = Expense.query.filter_by(user_id=current_user.id)
     
-    # Initialize filter values
     start_date = None
     end_date = None
     selected_category = None
@@ -301,7 +298,6 @@ def expenses():
     selected_currency = None
 
     if request.method == 'POST':
-        # Get filter values from form
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
         selected_category = request.form.get('category')
@@ -310,7 +306,6 @@ def expenses():
         selected_trip = request.form.get('trip')
         selected_currency = request.form.get('currency')
 
-        # Apply filters
         if start_date:
             start_date = datetime.strptime(start_date, '%Y-%m-%d')
             query = query.filter(Expense.date >= start_date)
@@ -334,11 +329,21 @@ def expenses():
         if selected_currency:
             query = query.filter(Expense.currency == selected_currency)
 
-    # Get filtered expenses and calculate total
     expenses = query.order_by(Expense.date.desc()).all()
     total_amount = sum(expense.nok_amount for expense in expenses)
 
-    # Get all filter options
+    summary = {
+        'total_amount': total_amount,
+        'count': len(expenses),
+    }
+
+    if expenses:
+        summary['avg_amount'] = total_amount / len(expenses)
+        summary['date_range'] = {
+            'start': min(expense.date for expense in expenses),
+            'end': max(expense.date for expense in expenses)
+        }
+
     categories = ExpenseCategory.query.all()
     projects = Project.query.all()
     suppliers = Supplier.query.all()
@@ -348,6 +353,7 @@ def expenses():
     return render_template('expenses.html', 
                          expenses=expenses,
                          total_amount=total_amount,
+                         summary=summary,
                          categories=categories,
                          projects=projects,
                          suppliers=suppliers,

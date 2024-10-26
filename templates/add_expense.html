@@ -3,12 +3,12 @@
 {% block content %}
 <h1 class="mb-4">Add New Expense</h1>
 <form method="POST" action="{{ url_for('add_expense') }}">
-    <div class="row">
-        <div class="col-md-4 mb-3">
+    <div class="row mb-3">
+        <div class="col-md-4">
             <label for="amount" class="form-label">Amount</label>
             <input type="number" step="0.01" class="form-control" id="amount" name="amount" required>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4">
             <label for="currency" class="form-label">Valuta</label>
             <select class="form-select" id="currency" name="currency" required>
                 {% for currency in currencies %}
@@ -16,11 +16,12 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-4 mb-3">
+        <div class="col-md-4">
             <label for="exchange_rate" class="form-label">Exchange Rate (to NOK)</label>
-            <input type="number" step="0.0001" class="form-control" id="exchange_rate" name="exchange_rate" value="1" required>
+            <input type="number" step="0.01" class="form-control" id="exchange_rate" name="exchange_rate" value="1" required>
         </div>
     </div>
+    
     <div class="mb-3">
         <label for="category" class="form-label">Category</label>
         <select class="form-select" id="category" name="category" required>
@@ -29,26 +30,54 @@
             {% endfor %}
         </select>
     </div>
-    <div id="car-expense-fields" style="display: none;">
-        <div class="mb-3">
+
+
+    <div class="row mb-3 bg-dark bg-gradient" id="car-expense-fields" style="display: none;">
+        <div class="col-md-4">
             <label for="kilometers" class="form-label">Kilometers</label>
-            <input type="number" step="0.1" class="form-control" id="kilometers" name="kilometers" value="0">
+            <input
+                type="number"
+                step="0.1"
+                class="form-control"
+                id="kilometers"
+                name="kilometers"
+                value="0"
+            />
         </div>
-        <div class="mb-3">
+        <div class="col-md-4">
             <label for="factor" class="form-label">Factor</label>
-            <input type="number" step="0.1" class="form-control" id="factor" name="factor" value="3.5">
+            <input
+                type="number"
+                step="0.1"
+                class="form-control"
+                id="factor"
+                name="factor"
+                value="3.5"
+            />
         </div>
-        <div class="mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Options</label>
             <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="passenger" name="passenger">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="passenger"
+                    name="passenger"
+                />
                 <label class="form-check-label" for="passenger">Passenger (+1.0)</label>
             </div>
             <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="trailer" name="trailer">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="trailer"
+                    name="trailer"
+                />
                 <label class="form-check-label" for="trailer">Trailer (+1.0)</label>
             </div>
         </div>
     </div>
+
     <div class="mb-3">
         <label for="date" class="form-label">Date</label>
         <input type="date" class="form-control" id="date" name="date" required>
@@ -104,7 +133,7 @@ document.getElementById('category').addEventListener('change', function() {
     const factorInput = document.getElementById('factor');
     
     if (this.options[this.selectedIndex].text === 'Car - distance-based allowance') {
-        carFields.style.display = 'block';
+        carFields.style.display = '';
         amountInput.readOnly = true;
         // Add calculation listeners
         kmInput.addEventListener('input', calculateAmount);
