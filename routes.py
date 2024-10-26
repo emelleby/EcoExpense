@@ -272,11 +272,11 @@ def add_expense():
     # categories = ExpenseCategory.query.all()
     categories = db.session.query(ExpenseCategory).order_by(
         case(
-            (ExpenseCategory.name == 'Car - distance-based allowance', 1),
+            (ExpenseCategory.name == 'Misc', 1),
             (ExpenseCategory.name == 'Accommodation', 2),
             (ExpenseCategory.name == 'Fuel Expenses', 3),
             (ExpenseCategory.name == 'Food', 4),
-            (ExpenseCategory.name == 'Misc', 5),
+            (ExpenseCategory.name == 'Car - distance-based allowance', 5),
         ).label("category_order")
     ).all()
 
