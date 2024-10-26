@@ -19,7 +19,6 @@ def register():
         organization_id = request.form.get('organization')
         
         if organization_id == "new":
-            # Store registration data in session
             session['registration_data'] = {
                 'username': username,
                 'email': email,
@@ -77,19 +76,16 @@ def create_organization():
             flash('Organization name already exists', 'danger')
             return redirect(url_for('create_organization'))
         
-        # Create new organization
         new_org = Organization(name=name, description=description)
         db.session.add(new_org)
         db.session.commit()
         
-        # Create default roles
         admin_role = Role(name='Admin', organization_id=new_org.id)
         member_role = Role(name='Member', organization_id=new_org.id)
         db.session.add(admin_role)
         db.session.add(member_role)
         db.session.commit()
         
-        # Create user with admin role
         reg_data = session.pop('registration_data')
         new_user = User()
         new_user.username = reg_data['username']
@@ -163,7 +159,6 @@ def organizations():
 def manage_users(org_id):
     organization = Organization.query.get_or_404(org_id)
     
-    # Check if user belongs to the organization or is a superadmin
     if organization.id != current_user.organization_id and not current_user.is_admin:
         flash('You can only manage users in your own organization.', 'danger')
         return redirect(url_for('index'))
@@ -185,12 +180,10 @@ def update_user_role(user_id):
     user = User.query.get_or_404(user_id)
     new_role_id = request.form.get('role_id')
     
-    # Check if user belongs to the same organization
     if user.organization_id != current_user.organization_id and not current_user.is_admin:
         flash('You can only update roles for users in your organization.', 'danger')
         return redirect(url_for('index'))
     
-    # Verify the role belongs to the same organization
     new_role = Role.query.get(new_role_id)
     if not new_role or new_role.organization_id != user.organization_id:
         flash('Invalid role selected.', 'danger')
@@ -239,19 +232,14 @@ def search_suppliers():
 @login_required
 def add_expense():
     if request.method == 'POST':
-        # Get the supplier name from the form
         supplier_name = request.form['supplier'].strip()
-        
-        # Look for existing supplier (case-insensitive)
         supplier = Supplier.query.filter(func.lower(Supplier.name) == func.lower(supplier_name)).first()
         
-        # If supplier doesn't exist, create a new one
         if not supplier:
             supplier = Supplier(name=supplier_name, contact='')
             db.session.add(supplier)
             db.session.commit()
         
-        # Process the rest of the expense data
         amount = float(request.form['amount'])
         currency = request.form['currency']
         exchange_rate = float(request.form['exchange_rate'])
@@ -278,7 +266,7 @@ def add_expense():
         db.session.add(new_expense)
         db.session.commit()
         flash('Expense added successfully!', 'success')
-        return redirect(url_for('expenses_list'))
+        return redirect(url_for('expenses'))
 
     categories = ExpenseCategory.query.all()
     trips = Trip.query.all()
@@ -287,11 +275,80 @@ def add_expense():
     return render_template('add_expense.html', categories=categories,
                            trips=trips, projects=projects, currencies=currencies)
 
-@app.route('/expenses')
+@app.route('/expenses', methods=['GET', 'POST'])
 @login_required
-def expenses_list():
-    expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
-    return render_template('expenses_list.html', expenses=expenses)
+def expenses():
+    query = Expense.query.filter_by(user_id=current_user.id)
+    
+    # Initialize filter values
+    start_date = None
+    end_date = None
+    selected_category = None
+    selected_project = None
+    selected_supplier = None
+    selected_trip = None
+    selected_currency = None
+
+    if request.method == 'POST':
+        # Get filter values from form
+        start_date = request.form.get('start_date')
+        end_date = request.form.get('end_date')
+        selected_category = request.form.get('category')
+        selected_project = request.form.get('project')
+        selected_supplier = request.form.get('supplier')
+        selected_trip = request.form.get('trip')
+        selected_currency = request.form.get('currency')
+
+        # Apply filters
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Expense.date >= start_date)
+        
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+            query = query.filter(Expense.date <= end_date)
+        
+        if selected_category:
+            query = query.filter(Expense.category_id == selected_category)
+        
+        if selected_project:
+            query = query.filter(Expense.project_id == selected_project)
+        
+        if selected_supplier:
+            query = query.filter(Expense.supplier_id == selected_supplier)
+        
+        if selected_trip:
+            query = query.filter(Expense.trip_id == selected_trip)
+        
+        if selected_currency:
+            query = query.filter(Expense.currency == selected_currency)
+
+    # Get filtered expenses and calculate total
+    expenses = query.order_by(Expense.date.desc()).all()
+    total_amount = sum(expense.nok_amount for expense in expenses)
+
+    # Get all filter options
+    categories = ExpenseCategory.query.all()
+    projects = Project.query.all()
+    suppliers = Supplier.query.all()
+    trips = Trip.query.all()
+    currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
+
+    return render_template('expenses.html', 
+                         expenses=expenses,
+                         total_amount=total_amount,
+                         categories=categories,
+                         projects=projects,
+                         suppliers=suppliers,
+                         trips=trips,
+                         currencies=currencies,
+                         start_date=start_date,
+                         end_date=end_date,
+                         selected_category=selected_category,
+                         selected_project=selected_project,
+                         selected_supplier=selected_supplier,
+                         selected_trip=selected_trip,
+                         selected_currency=selected_currency)
 
 @app.route('/delete_expense/<int:expense_id>', methods=['POST'])
 @login_required
@@ -299,12 +356,12 @@ def delete_expense(expense_id):
     expense = Expense.query.get_or_404(expense_id)
     if expense.user_id != current_user.id:
         flash('You are not authorized to delete this expense.', 'danger')
-        return redirect(url_for('expenses_list'))
+        return redirect(url_for('expenses'))
     
     db.session.delete(expense)
     db.session.commit()
     flash('Expense deleted successfully.', 'success')
-    return redirect(url_for('expenses_list'))
+    return redirect(url_for('expenses'))
 
 @app.route('/suppliers', methods=['GET', 'POST'])
 @login_required
@@ -376,36 +433,3 @@ def category_expenses():
     ).join(Expense).filter(Expense.user_id == current_user.id).group_by(ExpenseCategory.name).all()
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
-
-@app.route('/expense_report', methods=['GET', 'POST'])
-@login_required
-def expense_report():
-    categories = ExpenseCategory.query.all()
-    projects = Project.query.all()
-
-    if request.method == 'POST':
-        start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
-        end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d')
-        category_id = request.form.get('category')
-        project_id = request.form.get('project')
-
-        query = Expense.query.filter(
-            Expense.user_id == current_user.id,
-            Expense.date >= start_date,
-            Expense.date <= end_date
-        )
-
-        if category_id:
-            query = query.filter(Expense.category_id == category_id)
-        if project_id:
-            query = query.filter(Expense.project_id == project_id)
-
-        expenses = query.order_by(Expense.date).all()
-        total_amount = sum(expense.nok_amount for expense in expenses)
-
-        return render_template('expense_report.html', expenses=expenses, total_amount=total_amount,
-                               categories=categories, projects=projects, 
-                               start_date=start_date, end_date=end_date)
-
-    return render_template('expense_report.html', expenses=None, total_amount=None,
-                           categories=categories, projects=projects)

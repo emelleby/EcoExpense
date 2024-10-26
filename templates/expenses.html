@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Expenses</h1>
+
+<form method="POST" action="{{ url_for('expenses') }}" class="mb-4">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Filter Expenses</h5>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="start_date" class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="end_date" class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="category" class="form-label">Category</label>
+                    <select class="form-select" id="category" name="category">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if selected_category == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="project" class="form-label">Project</label>
+                    <select class="form-select" id="project" name="project">
+                        <option value="">All Projects</option>
+                        {% for project in projects %}
+                        <option value="{{ project.id }}" {% if selected_project == project.id %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="supplier" class="form-label">Supplier</label>
+                    <select class="form-select" id="supplier" name="supplier">
+                        <option value="">All Suppliers</option>
+                        {% for supplier in suppliers %}
+                        <option value="{{ supplier.id }}" {% if selected_supplier == supplier.id %}selected{% endif %}>
+                            {{ supplier.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="trip" class="form-label">Trip</label>
+                    <select class="form-select" id="trip" name="trip">
+                        <option value="">All Trips</option>
+                        {% for trip in trips %}
+                        <option value="{{ trip.id }}" {% if selected_trip == trip.id %}selected{% endif %}>
+                            {{ trip.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label for="currency" class="form-label">Currency</label>
+                    <select class="form-select" id="currency" name="currency">
+                        <option value="">All Currencies</option>
+                        {% for curr in currencies %}
+                        <option value="{{ curr }}" {% if selected_currency == curr %}selected{% endif %}>{{ curr }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </div>
+    </div>
+</form>
+
+{% if expenses %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Summary</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <p class="mb-1"><strong>Total Amount (NOK):</strong> {{ "%.2f"|format(total_amount) }}</p>
+            </div>
+            <div class="col-md-4">
+                <p class="mb-1"><strong>Number of Expenses:</strong> {{ expenses|length }}</p>
+            </div>
+            {% if start_date and end_date %}
+            <div class="col-md-4">
+                <p class="mb-1"><strong>Period:</strong> {{ start_date.strftime('%Y-%m-%d') }} to {{ end_date.strftime('%Y-%m-%d') }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Currency</th>
+                <th>Exchange Rate</th>
+                <th>NOK Amount</th>
+                <th>Description</th>
+                <th>Supplier</th>
+                <th>Category</th>
+                <th>Trip</th>
+                <th>Project</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ "%.2f"|format(expense.amount) }}</td>
+                <td>{{ expense.currency }}</td>
+                <td>{{ "%.4f"|format(expense.exchange_rate) }}</td>
+                <td>{{ "%.2f"|format(expense.nok_amount) }}</td>
+                <td>{{ expense.description }}</td>
+                <td>{{ expense.supplier.name }}</td>
+                <td>{{ expense.category.name }}</td>
+                <td>{{ expense.trip.name if expense.trip else '-' }}</td>
+                <td>{{ expense.project.name if expense.project else '-' }}</td>
+                <td>
+                    <form action="{{ url_for('delete_expense', expense_id=expense.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No expenses found for the selected criteria.</p>
+{% endif %}
+{% endblock %}
