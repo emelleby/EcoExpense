@@ -3,7 +3,8 @@ from flask_login import login_user, login_required, logout_user, current_user
 from app import app, db
 from models import User, Supplier, Trip, Project, ExpenseCategory, Expense, Organization, Role
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, case
+# from sqlalchemy import case
 from utils import admin_required, same_organization_required
 
 @app.route('/')
@@ -268,7 +269,17 @@ def add_expense():
         flash('Expense added successfully!', 'success')
         return redirect(url_for('expenses'))
 
-    categories = ExpenseCategory.query.all()
+    # categories = ExpenseCategory.query.all()
+    categories = db.session.query(ExpenseCategory).order_by(
+        case(
+            (ExpenseCategory.name == 'Car - distance-based allowance', 1),
+            (ExpenseCategory.name == 'Accommodation', 2),
+            (ExpenseCategory.name == 'Fuel Expenses', 3),
+            (ExpenseCategory.name == 'Food', 4),
+            (ExpenseCategory.name == 'Misc', 5),
+        ).label("category_order")
+    ).all()
+
     trips = Trip.query.all()
     projects = Project.query.all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']

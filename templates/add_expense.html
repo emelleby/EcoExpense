@@ -21,6 +21,16 @@
             <input type="number" step="0.0001" class="form-control" id="exchange_rate" name="exchange_rate" value="1" required>
         </div>
     </div>
+    <div id="car-expense-fields" style="display: none;">
+        <div class="mb-3">
+            <label for="kilometers" class="form-label">Kilometers</label>
+            <input type="number" step="0.1" class="form-control" id="kilometers" name="kilometers" value="0">
+        </div>
+        <div class="mb-3">
+            <label for="factor" class="form-label">Factor</label>
+            <input type="number" step="0.1" class="form-control" id="factor" name="factor" value="3.5">
+        </div>
+    </div>
     <div class="mb-3">
         <label for="date" class="form-label">Date</label>
         <input type="date" class="form-control" id="date" name="date" required>
@@ -76,5 +86,31 @@ document.getElementById('supplier').addEventListener('input', function(e) {
             });
     }
 });
+
+document.getElementById('category').addEventListener('change', function() {
+    const carFields = document.getElementById('car-expense-fields');
+    const amountInput = document.getElementById('amount');
+    const kmInput = document.getElementById('kilometers');
+    const factorInput = document.getElementById('factor');
+    
+    if (this.options[this.selectedIndex].text === 'Car - distance-based allowance') {
+        carFields.style.display = 'block';
+        amountInput.readOnly = true;
+        // Add calculation listeners
+        kmInput.addEventListener('input', calculateAmount);
+        factorInput.addEventListener('input', calculateAmount);
+    } else {
+        carFields.style.display = 'none';
+        amountInput.readOnly = false;
+    }
+});
+
+function calculateAmount() {
+    const km = parseFloat(document.getElementById('kilometers').value) || 0;
+    const factor = parseFloat(document.getElementById('factor').value) || 3.5;
+    const amountInput = document.getElementById('amount');
+    const amount = km * factor;
+    amountInput.value = amount.toFixed(2);
+}
 </script>
 {% endblock %}
