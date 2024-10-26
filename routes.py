@@ -4,6 +4,7 @@ from app import app, db
 from models import User, Supplier, Trip, Project, ExpenseCategory, Expense, Organization, Role
 from datetime import datetime
 from sqlalchemy import func
+from utils import admin_required, same_organization_required
 
 @app.route('/')
 def index():
@@ -130,12 +131,9 @@ def logout():
 
 @app.route('/organizations', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def organizations():
     if request.method == 'POST':
-        if not current_user.is_admin:
-            flash('Only administrators can create organizations', 'danger')
-            return redirect(url_for('organizations'))
-        
         name = request.form['name']
         description = request.form['description']
         
@@ -159,8 +157,53 @@ def organizations():
     organizations = Organization.query.all()
     return render_template('organizations.html', organizations=organizations)
 
+@app.route('/organizations/<int:org_id>/manage_users')
+@login_required
+@admin_required
+def manage_users(org_id):
+    organization = Organization.query.get_or_404(org_id)
+    
+    # Check if user belongs to the organization or is a superadmin
+    if organization.id != current_user.organization_id and not current_user.is_admin:
+        flash('You can only manage users in your own organization.', 'danger')
+        return redirect(url_for('index'))
+    
+    users = User.query.filter_by(organization_id=org_id).all()
+    roles = Role.query.filter_by(organization_id=org_id).all()
+    stats = organization.get_statistics()
+    
+    return render_template('manage_users.html', 
+                         organization=organization,
+                         users=users,
+                         roles=roles,
+                         stats=stats)
+
+@app.route('/organizations/users/<int:user_id>/update_role', methods=['POST'])
+@login_required
+@admin_required
+def update_user_role(user_id):
+    user = User.query.get_or_404(user_id)
+    new_role_id = request.form.get('role_id')
+    
+    # Check if user belongs to the same organization
+    if user.organization_id != current_user.organization_id and not current_user.is_admin:
+        flash('You can only update roles for users in your organization.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Verify the role belongs to the same organization
+    new_role = Role.query.get(new_role_id)
+    if not new_role or new_role.organization_id != user.organization_id:
+        flash('Invalid role selected.', 'danger')
+        return redirect(url_for('manage_users', org_id=user.organization_id))
+    
+    user.role_id = new_role_id
+    db.session.commit()
+    flash('User role updated successfully.', 'success')
+    return redirect(url_for('manage_users', org_id=user.organization_id))
+
 @app.route('/organizations/<int:org_id>/roles', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def manage_organization_roles(org_id):
     organization = Organization.query.get_or_404(org_id)
     
@@ -320,7 +363,7 @@ def supplier_expenses():
     supplier_expenses = db.session.query(
         Supplier.name,
         func.sum(Expense.nok_amount).label('total_amount')
-    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(Supplier.id).all()
+    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(Supplier.name).all()
     
     return jsonify([{'name': se.name, 'total_amount': float(se.total_amount)} for se in supplier_expenses])
 
@@ -330,7 +373,7 @@ def category_expenses():
     category_expenses = db.session.query(
         ExpenseCategory.name,
         func.sum(Expense.nok_amount).label('total_amount')
-    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(ExpenseCategory.id).all()
+    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(ExpenseCategory.name).all()
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
 

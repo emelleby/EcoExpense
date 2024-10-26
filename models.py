@@ -2,6 +2,7 @@ from app import db
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.orm import validates
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -13,6 +14,20 @@ class Organization(db.Model):
     def __init__(self, name, description=None):
         self.name = name
         self.description = description
+
+    def get_statistics(self):
+        total_users = self.users.count()
+        total_expenses = sum(user.expenses.count() for user in self.users.all())
+        total_amount = sum(
+            expense.nok_amount 
+            for user in self.users.all() 
+            for expense in user.expenses.all()
+        )
+        return {
+            'total_users': total_users,
+            'total_expenses': total_expenses,
+            'total_amount': total_amount
+        }
 
 class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -29,16 +44,25 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(255))
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'))
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
+    role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     expenses = db.relationship('Expense', backref='user', lazy='dynamic')
     is_admin = db.Column(db.Boolean, default=False)
+
+    @validates('organization_id', 'role_id')
+    def validate_required_fields(self, key, value):
+        if value is None:
+            raise ValueError(f'{key} cannot be None')
+        return value
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def has_role(self, role_name):
+        return self.role.name == role_name
 
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
