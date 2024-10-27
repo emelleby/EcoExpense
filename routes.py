@@ -26,6 +26,91 @@ def login():
     
     return render_template('login.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        organization_id = request.form['organization']
+
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists', 'danger')
+            return redirect(url_for('register'))
+
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered', 'danger')
+            return redirect(url_for('register'))
+
+        if organization_id == 'new':
+            return redirect(url_for('create_organization'))
+
+        user = User(username=username, email=email, organization_id=organization_id)
+        user.set_password(password)
+        
+        # Assign default role for the organization
+        default_role = Role.query.filter_by(organization_id=organization_id, name='User').first()
+        if not default_role:
+            default_role = Role(name='User', organization_id=organization_id)
+            db.session.add(default_role)
+            db.session.commit()
+        
+        user.role_id = default_role.id
+        db.session.add(user)
+        db.session.commit()
+        
+        flash('Registration successful! Please login.', 'success')
+        return redirect(url_for('login'))
+
+    organizations = Organization.query.all()
+    return render_template('register.html', organizations=organizations)
+
+@app.route('/create_organization', methods=['GET', 'POST'])
+def create_organization():
+    if 'username' not in session:
+        flash('Please fill in registration details first', 'danger')
+        return redirect(url_for('register'))
+
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+
+        if Organization.query.filter_by(name=name).first():
+            flash('Organization name already exists', 'danger')
+            return redirect(url_for('create_organization'))
+
+        org = Organization(name=name, description=description)
+        db.session.add(org)
+        db.session.commit()
+
+        # Create default roles for the organization
+        admin_role = Role(name='Admin', organization_id=org.id)
+        user_role = Role(name='User', organization_id=org.id)
+        db.session.add(admin_role)
+        db.session.add(user_role)
+
+        # Create the user as an admin
+        user = User(
+            username=session['username'],
+            email=session['email'],
+            organization_id=org.id,
+            role_id=admin_role.id,
+            is_admin=True
+        )
+        user.set_password(session['password'])
+        db.session.add(user)
+        db.session.commit()
+
+        # Clear session
+        session.pop('username', None)
+        session.pop('email', None)
+        session.pop('password', None)
+
+        flash('Organization created and registration completed! Please login.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('create_organization.html')
+
 @app.route('/logout')
 @login_required
 def logout():
@@ -36,9 +121,17 @@ def logout():
 @app.route('/settings')
 @login_required
 def settings():
-    trips = Trip.query.filter_by(user_id=current_user.id).all()
-    projects = Project.query.filter_by(user_id=current_user.id).all()
-    return render_template('settings.html', trips=trips, projects=projects)
+    try:
+        trips = Trip.query.filter_by(user_id=current_user.id).all()
+    except Exception:
+        trips = []
+    
+    try:
+        projects = Project.query.filter_by(user_id=current_user.id).all()
+    except Exception:
+        projects = []
+    
+    return render_template('settings.html', trips=trips or [], projects=projects or [])
 
 @app.route('/trips', methods=['GET', 'POST'])
 @login_required
@@ -53,7 +146,8 @@ def trips():
         flash('Trip added successfully!', 'success')
         return redirect(url_for('settings'))
 
-    return redirect(url_for('settings'))
+    trips = Trip.query.filter_by(user_id=current_user.id).all()
+    return render_template('settings.html', trips=trips)
 
 @app.route('/projects', methods=['GET', 'POST'])
 @login_required
@@ -67,7 +161,8 @@ def projects():
         flash('Project added successfully!', 'success')
         return redirect(url_for('settings'))
 
-    return redirect(url_for('settings'))
+    projects = Project.query.filter_by(user_id=current_user.id).all()
+    return render_template('settings.html', projects=projects)
 
 @app.route('/add_expense', methods=['GET', 'POST'])
 @login_required
@@ -110,8 +205,8 @@ def add_expense():
         return redirect(url_for('expenses'))
 
     categories = ExpenseCategory.query.all()
-    trips = Trip.query.filter_by(user_id=current_user.id).all()
-    projects = Project.query.filter_by(user_id=current_user.id).all()
+    trips = Trip.query.filter_by(user_id=current_user.id).all() or []
+    projects = Project.query.filter_by(user_id=current_user.id).all() or []
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
     return render_template('add_expense.html', categories=categories,
                          trips=trips, projects=projects, currencies=currencies)
@@ -177,9 +272,9 @@ def expenses():
         }
 
     categories = ExpenseCategory.query.all()
-    projects = Project.query.filter_by(user_id=current_user.id).all()
+    projects = Project.query.filter_by(user_id=current_user.id).all() or []
     suppliers = Supplier.query.all()
-    trips = Trip.query.filter_by(user_id=current_user.id).all()
+    trips = Trip.query.filter_by(user_id=current_user.id).all() or []
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
 
     return render_template('expenses.html', 
@@ -258,3 +353,56 @@ def category_expenses():
     ).join(Expense).filter(Expense.user_id == current_user.id).group_by(ExpenseCategory.name).all()
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
+
+@app.route('/organizations')
+@login_required
+@admin_required
+def organizations():
+    orgs = Organization.query.all()
+    return render_template('organizations.html', organizations=orgs)
+
+@app.route('/manage_users/<int:org_id>')
+@login_required
+@admin_required
+def manage_users(org_id):
+    organization = Organization.query.get_or_404(org_id)
+    users = User.query.filter_by(organization_id=org_id).all()
+    roles = Role.query.filter_by(organization_id=org_id).all()
+    stats = organization.get_statistics()
+    return render_template('manage_users.html', 
+                         organization=organization,
+                         users=users,
+                         roles=roles,
+                         stats=stats)
+
+@app.route('/manage_roles/<int:org_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_organization_roles(org_id):
+    organization = Organization.query.get_or_404(org_id)
+    if request.method == 'POST':
+        name = request.form['name']
+        new_role = Role(name=name, organization_id=org_id)
+        db.session.add(new_role)
+        db.session.commit()
+        flash('Role added successfully!', 'success')
+        return redirect(url_for('manage_organization_roles', org_id=org_id))
+
+    roles = Role.query.filter_by(organization_id=org_id).all()
+    return render_template('manage_roles.html', organization=organization, roles=roles)
+
+@app.route('/update_user_role/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def update_user_role(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.organization_id != current_user.organization_id and not current_user.is_admin:
+        flash('You can only update roles for users in your organization.', 'danger')
+        return redirect(url_for('index'))
+
+    role_id = request.form.get('role_id')
+    if role_id:
+        user.role_id = role_id
+        db.session.commit()
+        flash('User role updated successfully!', 'success')
+    return redirect(url_for('manage_users', org_id=user.organization_id))
