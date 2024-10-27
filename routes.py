@@ -125,6 +125,13 @@ def logout():
     flash('Logged out successfully.', 'success')
     return redirect(url_for('index'))
 
+@app.route('/settings')
+@login_required
+def settings():
+    trips = Trip.query.all()
+    projects = Project.query.all()
+    return render_template('settings.html', trips=trips, projects=projects)
+
 @app.route('/organizations', methods=['GET', 'POST'])
 @login_required
 @admin_required
@@ -406,10 +413,9 @@ def trips():
         db.session.add(new_trip)
         db.session.commit()
         flash('Trip added successfully!', 'success')
-        return redirect(url_for('trips'))
+        return redirect(url_for('settings'))
 
-    trips_list = Trip.query.all()
-    return render_template('trips.html', trips=trips_list)
+    return redirect(url_for('settings'))
 
 @app.route('/projects', methods=['GET', 'POST'])
 @login_required
@@ -421,10 +427,9 @@ def projects():
         db.session.add(new_project)
         db.session.commit()
         flash('Project added successfully!', 'success')
-        return redirect(url_for('projects'))
+        return redirect(url_for('settings'))
 
-    projects_list = Project.query.all()
-    return render_template('projects.html', projects=projects_list)
+    return redirect(url_for('settings'))
 
 @app.route('/expense_analysis')
 @login_required
