@@ -38,7 +38,7 @@
                     {% endif %}
                 </div>
 
-                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('tripForm')">Add New Trip</button>
+                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('tripForm')">+ Add New Trip</button>
                 
                 <form method="POST" action="{{ url_for('trips') }}" class="mb-4" id="tripForm" style="display: none;">
                     <h3 class="h6 mb-3">Add New Trip</h3>
@@ -92,7 +92,7 @@
                     {% endif %}
                 </div>
 
-                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('projectForm')">Add New Project</button>
+                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('projectForm')">+ Add New Project</button>
                 
                 <form method="POST" action="{{ url_for('projects') }}" class="mb-4" id="projectForm" style="display: none;">
                     <h3 class="h6 mb-3">Add New Project</h3>
@@ -114,7 +114,13 @@
 <script>
 function toggleForm(formId) {
     const form = document.getElementById(formId);
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    if (form) {
+        if (form.style.display === 'none' || form.style.display === '') {
+            form.style.display = 'block';
+        } else {
+            form.style.display = 'none';
+        }
+    }
 }
 </script>
 {% endblock %}
