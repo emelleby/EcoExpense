@@ -10,7 +10,9 @@
                 <h2 class="h5 mb-0">Trip Management</h2>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('trips') }}" class="mb-4">
+                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('tripForm')">Add New Trip</button>
+                
+                <form method="POST" action="{{ url_for('trips') }}" class="mb-4" id="tripForm" style="display: none;">
                     <h3 class="h6 mb-3">Add New Trip</h3>
                     <div class="mb-3">
                         <label for="trip_name" class="form-label">Name</label>
@@ -62,7 +64,9 @@
                 <h2 class="h5 mb-0">Project Management</h2>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('projects') }}" class="mb-4">
+                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('projectForm')">Add New Project</button>
+                
+                <form method="POST" action="{{ url_for('projects') }}" class="mb-4" id="projectForm" style="display: none;">
                     <h3 class="h6 mb-3">Add New Project</h3>
                     <div class="mb-3">
                         <label for="project_name" class="form-label">Name</label>
@@ -102,4 +106,15 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleForm(formId) {
+    const form = document.getElementById(formId);
+    if (form.style.display === 'none') {
+        form.style.display = 'block';
+    } else {
+        form.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}
