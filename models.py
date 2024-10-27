@@ -47,6 +47,8 @@ class User(UserMixin, db.Model):
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
     expenses = db.relationship('Expense', backref='user', lazy='dynamic')
+    trips = db.relationship('Trip', backref='user', lazy='dynamic')
+    projects = db.relationship('Project', backref='user', lazy='dynamic')
     is_admin = db.Column(db.Boolean, default=False)
 
     @validates('organization_id', 'role_id')
@@ -79,22 +81,26 @@ class Trip(db.Model):
     name = db.Column(db.String(100), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     expenses = db.relationship('Expense', backref='trip', lazy=True)
 
-    def __init__(self, name, start_date, end_date):
+    def __init__(self, name, start_date, end_date, user_id):
         self.name = name
         self.start_date = start_date
         self.end_date = end_date
+        self.user_id = user_id
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     expenses = db.relationship('Expense', backref='project', lazy=True)
 
-    def __init__(self, name, description):
+    def __init__(self, name, description, user_id):
         self.name = name
         self.description = description
+        self.user_id = user_id
 
 class ExpenseCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
