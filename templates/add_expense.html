@@ -26,7 +26,7 @@
         <label for="category" class="form-label">Category</label>
         <select class="form-select" id="category" name="category" required>
             {% for category in categories %}
-            <option value="{{ category.id }}" data-is-fuel="{{ category.is_fuel|lower }}">{{ category.name }}</option>
+            <option value="{{ category.id }}">{{ category.name }}</option>
             {% endfor %}
         </select>
     </div>
@@ -109,10 +109,10 @@ document.getElementById('supplier').addEventListener('input', function(e) {
 
 document.getElementById('category').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
-    const isFuel = selectedOption.getAttribute('data-is-fuel') === 'true';
+    const selectedText = selectedOption.textContent.trim();
     const fuelFields = document.getElementById('fuel-expense-fields');
     
-    if (isFuel) {
+    if (selectedText === 'Fuel Expenses') {
         fuelFields.style.display = 'block';
     } else {
         fuelFields.style.display = 'none';
