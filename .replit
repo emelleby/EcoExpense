@@ -51,6 +51,10 @@ args = "Apply Migration"
 task = "workflow.run"
 args = "Insert Categories"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Add Categories"
+
 [[workflows.workflow]]
 name = "Start Flask App"
 author = "agent"
@@ -167,6 +171,37 @@ args = """
 python3 -c \"
 from app import app, db
 from models import ExpenseCategory
+with app.app_context():
+    # Add fuel categories if they don't exist
+    fuel_categories = [
+        ('Car Fuel - Gasoline', True),
+        ('Car Fuel - Diesel', True),
+        ('Car Fuel - Biodiesel', True)
+    ]
+    
+    for name, is_fuel in fuel_categories:
+        if not ExpenseCategory.query.filter_by(name=name).first():
+            category = ExpenseCategory(name=name, is_fuel=True)
+            db.session.add(category)
+    
+    db.session.commit()
+\"
+"""
+
+[[workflows.workflow]]
+name = "Add Categories"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = """
+python3 -c \"
+from app import app, db
+from models import ExpenseCategory
+
 with app.app_context():
     # Add fuel categories if they don't exist
     fuel_categories = [
