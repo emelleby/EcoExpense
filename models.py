@@ -105,10 +105,12 @@ class Project(db.Model):
 class ExpenseCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
+    is_fuel = db.Column(db.Boolean, default=False)
     expenses = db.relationship('Expense', backref='category', lazy=True)
 
-    def __init__(self, name):
+    def __init__(self, name, is_fuel=False):
         self.name = name
+        self.is_fuel = is_fuel
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -123,8 +125,16 @@ class Expense(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     category_id = db.Column(db.Integer, db.ForeignKey('expense_category.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Fuel expense specific fields
+    kilometers = db.Column(db.Float)
+    fuel_type = db.Column(db.String(50))
+    fuel_amount_liters = db.Column(db.Float)
+    co2_emissions = db.Column(db.Float)  # in kg CO2
 
-    def __init__(self, amount, currency, exchange_rate, nok_amount, date, description, supplier_id, category_id, user_id, trip_id=None, project_id=None):
+    def __init__(self, amount, currency, exchange_rate, nok_amount, date, description, 
+                 supplier_id, category_id, user_id, trip_id=None, project_id=None,
+                 kilometers=None, fuel_type=None, fuel_amount_liters=None, co2_emissions=None):
         self.amount = amount
         self.currency = currency
         self.exchange_rate = exchange_rate
@@ -136,3 +146,7 @@ class Expense(db.Model):
         self.user_id = user_id
         self.trip_id = trip_id
         self.project_id = project_id
+        self.kilometers = kilometers
+        self.fuel_type = fuel_type
+        self.fuel_amount_liters = fuel_amount_liters
+        self.co2_emissions = co2_emissions
