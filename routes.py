@@ -48,6 +48,7 @@ def register():
         user = User(username=username, email=email, organization_id=organization_id)
         user.set_password(password)
         
+        # Assign default role for the organization
         default_role = Role.query.filter_by(organization_id=organization_id, name='User').first()
         if not default_role:
             default_role = Role(name='User', organization_id=organization_id)
@@ -82,11 +83,13 @@ def create_organization():
         db.session.add(org)
         db.session.commit()
 
+        # Create default roles for the organization
         admin_role = Role(name='Admin', organization_id=org.id)
         user_role = Role(name='User', organization_id=org.id)
         db.session.add(admin_role)
         db.session.add(user_role)
 
+        # Create the user as an admin
         user = User(
             username=session['username'],
             email=session['email'],
@@ -98,6 +101,7 @@ def create_organization():
         db.session.add(user)
         db.session.commit()
 
+        # Clear session
         session.pop('username', None)
         session.pop('email', None)
         session.pop('password', None)
@@ -178,34 +182,9 @@ def add_expense():
         nok_amount = amount * exchange_rate
         date = datetime.strptime(request.form['date'], '%Y-%m-%d')
         description = request.form['description']
-        category_id = int(request.form['category'])
+        category_id = request.form['category']
         trip_id = request.form['trip'] if request.form['trip'] != '' else None
         project_id = request.form['project'] if request.form['project'] != '' else None
-
-        category = ExpenseCategory.query.get(category_id)
-        
-        kilometers = None
-        fuel_type = None
-        fuel_amount_liters = None
-        co2_emissions = None
-
-        if category.name == 'Car - Distance-based allowance':
-            kilometers = float(request.form.get('distance_kilometers', 0))
-        elif category.is_fuel:
-            kilometers = float(request.form.get('kilometers', 0))
-            fuel_type = request.form.get('fuel_type')
-            fuel_amount_liters = float(request.form.get('fuel_amount_liters', 0))
-
-            emissions_factors = {
-                'gasoline': 2.31,
-                'diesel': 2.68,
-                'biodiesel': 1.91
-            }
-            
-            if fuel_type in emissions_factors:
-                co2_emissions = fuel_amount_liters * emissions_factors[fuel_type]
-            else:
-                co2_emissions = 0
 
         new_expense = Expense(
             amount=amount,
@@ -218,11 +197,7 @@ def add_expense():
             category_id=category_id,
             user_id=current_user.id,
             trip_id=trip_id,
-            project_id=project_id,
-            kilometers=kilometers,
-            fuel_type=fuel_type,
-            fuel_amount_liters=fuel_amount_liters,
-            co2_emissions=co2_emissions
+            project_id=project_id
         )
         db.session.add(new_expense)
         db.session.commit()
@@ -230,24 +205,11 @@ def add_expense():
         return redirect(url_for('expenses'))
 
     categories = ExpenseCategory.query.all()
-    trips = Trip.query.filter_by(user_id=current_user.id).all()
-    projects = Project.query.filter_by(user_id=current_user.id).all()
+    trips = Trip.query.filter_by(user_id=current_user.id).all() or []
+    projects = Project.query.filter_by(user_id=current_user.id).all() or []
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
-    # fuel_types = ['gasoline', 'diesel', 'biodiesel']
-    fuel_types = {
-        "Gasoline": {
-            "scope1": 2.17, "Scope3": 0.61
-            }, 
-        "Diesel": {
-            "scope1": 2.54, "Scope3": 0.62
-            }
-        }
-    return render_template('add_expense.html', 
-                         categories=categories,
-                         trips=trips, 
-                         projects=projects, 
-                         currencies=currencies,
-                         fuel_types=fuel_types)
+    return render_template('add_expense.html', categories=categories,
+                         trips=trips, projects=projects, currencies=currencies)
 
 @app.route('/expenses', methods=['GET', 'POST'])
 @login_required
