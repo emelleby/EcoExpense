@@ -233,7 +233,15 @@ def add_expense():
     trips = Trip.query.filter_by(user_id=current_user.id).all()
     projects = Project.query.filter_by(user_id=current_user.id).all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
-    fuel_types = ['gasoline', 'diesel', 'biodiesel']
+    # fuel_types = ['gasoline', 'diesel', 'biodiesel']
+    fuel_types = {
+        "Gasoline": {
+            "scope1": 2.17, "Scope3": 0.61
+            }, 
+        "Diesel": {
+            "scope1": 2.54, "Scope3": 0.62
+            }
+        }
     return render_template('add_expense.html', 
                          categories=categories,
                          trips=trips, 
