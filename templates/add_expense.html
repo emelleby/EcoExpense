@@ -59,6 +59,17 @@
         </div>
     </div>
 
+    <!-- Distance-based allowance fields -->
+    <div id="distance-expense-fields" style="display: none;" class="mb-3 p-3 bg-dark rounded">
+        <h3 class="h5 mb-3">Distance Details</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <label for="distance_kilometers" class="form-label">Total Kilometers</label>
+                <input type="number" step="0.1" class="form-control" id="distance_kilometers" name="distance_kilometers">
+            </div>
+        </div>
+    </div>
+
     <div class="mb-3">
         <label for="date" class="form-label">Date</label>
         <input type="date" class="form-control" id="date" name="date" required>
@@ -111,11 +122,17 @@ document.getElementById('category').addEventListener('change', function() {
     const selectedOption = this.options[this.selectedIndex];
     const selectedText = selectedOption.textContent.trim();
     const fuelFields = document.getElementById('fuel-expense-fields');
+    const distanceFields = document.getElementById('distance-expense-fields');
     
     if (selectedText === 'Fuel Expenses') {
         fuelFields.style.display = 'block';
+        distanceFields.style.display = 'none';
+    } else if (selectedText === 'Car - Distance-based allowance') {
+        distanceFields.style.display = 'block';
+        fuelFields.style.display = 'none';
     } else {
         fuelFields.style.display = 'none';
+        distanceFields.style.display = 'none';
     }
 });
 
