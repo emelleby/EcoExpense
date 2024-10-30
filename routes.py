@@ -189,7 +189,9 @@ def add_expense():
         fuel_amount_liters = None
         co2_emissions = None
 
-        if category.is_fuel:
+        if category.name == 'Car - Distance-based allowance':
+            kilometers = float(request.form.get('distance_kilometers', 0))
+        elif category.is_fuel:
             kilometers = float(request.form.get('kilometers', 0))
             fuel_type = request.form.get('fuel_type')
             fuel_amount_liters = float(request.form.get('fuel_amount_liters', 0))
