@@ -1,8 +1,8 @@
 """merge multiple heads
 
-Revision ID: d002f699eef1
-Revises: 4718e0bfa470
-Create Date: 2024-10-27 01:36:15.900599
+Revision ID: 19874c3a7de7
+Revises: c2e2c2d66bf2
+Create Date: 2024-10-30 22:56:55.412564
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd002f699eef1'
-down_revision = '4718e0bfa470'
+revision = '19874c3a7de7'
+down_revision = 'c2e2c2d66bf2'
 branch_labels = None
 depends_on = None
 

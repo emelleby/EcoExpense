@@ -123,6 +123,11 @@ class Expense(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     category_id = db.Column(db.Integer, db.ForeignKey('expense_category.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    kilometers = db.Column(db.Float, nullable=False, default=0.0)
+    fuel_type = db.Column(db.String(50), nullable=False, default='')
+    fuel_amount_liters = db.Column(db.Float, nullable=False, default=0.0)
+    scope1_co2_emissions = db.Column(db.Float, nullable=False, default=0.0)
+    scope3_co2_emissions = db.Column(db.Float, nullable=False, default=0.0)
 
     def __init__(self, amount, currency, exchange_rate, nok_amount, date, description, supplier_id, category_id, user_id, trip_id=None, project_id=None):
         self.amount = amount

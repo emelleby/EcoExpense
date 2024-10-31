@@ -6,6 +6,15 @@ from datetime import datetime
 from sqlalchemy import func, case
 from utils import admin_required, same_organization_required
 
+fuel_types = {
+    "Gasoline": {
+        "scope1": 2.17, "scope3": 0.61
+        }, 
+    "Diesel": {
+        "scope1": 2.54, "scope3": 0.62
+        }
+    }
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -170,21 +179,45 @@ def add_expense():
     if request.method == 'POST':
         supplier_name = request.form['supplier'].strip()
         supplier = Supplier.query.filter(func.lower(Supplier.name) == func.lower(supplier_name)).first()
-        
+
         if not supplier:
             supplier = Supplier(name=supplier_name, contact='')
             db.session.add(supplier)
             db.session.commit()
-        
+
         amount = float(request.form['amount'])
         currency = request.form['currency']
         exchange_rate = float(request.form['exchange_rate'])
         nok_amount = amount * exchange_rate
         date = datetime.strptime(request.form['date'], '%Y-%m-%d')
         description = request.form['description']
-        category_id = request.form['category']
+        category_id = int(request.form['category'])
         trip_id = request.form['trip'] if request.form['trip'] != '' else None
         project_id = request.form['project'] if request.form['project'] != '' else None
+
+        category = ExpenseCategory.query.get(category_id)
+
+        kilometers = 0.0
+        fuel_type = ''
+        fuel_amount_liters = 0.0
+        scope1_co2_emissions = 0.0
+        scope3_co2_emissions = 0.0
+        # co2_emissions = None
+
+        if category and category.name == 'Car - distance-based allowance':
+            kilometers = float(request.form.get('distance_kilometers', 0))
+            # TODO - Calculate emissions based on distance and fuel type and consumption and kwh
+        elif category and category.name == 'Fuel Expenses':
+            fuel_type = request.form.get('fuel_type')
+            fuel_amount_liters = float(request.form.get('fuel_amount_liters', 0))
+
+            if fuel_type in fuel_types:
+                scope1_co2_emissions = fuel_amount_liters * fuel_types[fuel_type]["scope1"]
+                scope3_co2_emissions = fuel_amount_liters * fuel_types[fuel_type]["scope3"]
+                # TODO - Calculate kwh
+            else:
+                scope1_co2_emissions = 0
+                scope3_co2_emissions = 0
 
         new_expense = Expense(
             amount=amount,
@@ -197,7 +230,12 @@ def add_expense():
             category_id=category_id,
             user_id=current_user.id,
             trip_id=trip_id,
-            project_id=project_id
+            project_id=project_id,
+            kilometers=kilometers,
+            fuel_type=fuel_type,
+            fuel_amount_liters=fuel_amount_liters,
+            scope1_co2_emissions=scope1_co2_emissions,
+            scope3_co2_emissions=scope3_co2_emissions,
         )
         db.session.add(new_expense)
         db.session.commit()
@@ -205,11 +243,26 @@ def add_expense():
         return redirect(url_for('expenses'))
 
     categories = ExpenseCategory.query.all()
-    trips = Trip.query.filter_by(user_id=current_user.id).all() or []
-    projects = Project.query.filter_by(user_id=current_user.id).all() or []
+    trips = Trip.query.filter_by(user_id=current_user.id).all()
+    projects = Project.query.filter_by(user_id=current_user.id).all()
+    suppliers = Supplier.query.all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
-    return render_template('add_expense.html', categories=categories,
-                         trips=trips, projects=projects, currencies=currencies)
+    # fuel_types = ['gasoline', 'diesel', 'biodiesel']
+    # fuel_types = {
+    #     "Gasoline": {
+    #         "scope1": 2.17, "Scope3": 0.61
+    #         }, 
+    #     "Diesel": {
+    #         "scope1": 2.54, "Scope3": 0.62
+    #         }
+    #     }
+    return render_template('add_expense.html', 
+                         categories=categories,
+                         trips=trips, 
+                         projects=projects, 
+                         suppliers=suppliers,
+                         currencies=currencies,
+                         fuel_types=fuel_types)
 
 @app.route('/expenses', methods=['GET', 'POST'])
 @login_required
