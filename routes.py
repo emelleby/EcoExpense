@@ -134,7 +134,7 @@ def create_organization():
             # Create organization and roles
             org = Organization(name=name, description=description)
             db.session.add(org)
-            db.session.flush()  # Get org.id without committing
+            db.session.flush()
 
             admin_role = Role(name='Admin', organization_id=org.id)
             user_role = Role(name='User', organization_id=org.id)
@@ -154,7 +154,7 @@ def create_organization():
             user.set_password(reg_data['password'])
             db.session.add(user)
 
-            # Create default expense categories without organization_id
+            # Create default expense categories
             default_categories = [
                 'Travel', 'Food', 'Accommodation', 'Office Supplies',
                 'Car - distance-based allowance', 'Fuel Expenses'
@@ -398,7 +398,7 @@ def add_expense():
     return render_template('add_expense.html', 
                          categories=categories,
                          trips=trips, 
-                         projects=projects, 
+                         projects=projects,
                          suppliers=suppliers,
                          currencies=currencies,
                          fuel_types=fuel_types)
@@ -406,80 +406,66 @@ def add_expense():
 @app.route('/expenses', methods=['GET', 'POST'])
 @login_required
 def expenses():
-    query = Expense.query.filter_by(user_id=current_user.id, organization_id=current_user.organization_id)
-    
-    start_date = None
-    end_date = None
-    selected_category = None
-    selected_project = None
-    selected_supplier = None
-    selected_trip = None
-    selected_currency = None
+    categories = ExpenseCategory.query.all()
+    trips = Trip.query.filter_by(user_id=current_user.id).all()
+    projects = Project.query.filter_by(user_id=current_user.id).all()
+    suppliers = Supplier.query.filter_by(organization_id=current_user.organization_id).all()
+    currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
 
+    query = Expense.query.filter_by(user_id=current_user.id)
+
+    # Apply filters
     if request.method == 'POST':
         start_date = request.form.get('start_date')
         end_date = request.form.get('end_date')
-        selected_category = request.form.get('category')
-        selected_project = request.form.get('project')
-        selected_supplier = request.form.get('supplier')
-        selected_trip = request.form.get('trip')
-        selected_currency = request.form.get('currency')
+        category = request.form.get('category')
+        project = request.form.get('project')
+        supplier = request.form.get('supplier')
+        trip = request.form.get('trip')
+        currency = request.form.get('currency')
 
         if start_date:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d')
-            query = query.filter(Expense.date >= start_date)
-        
+            query = query.filter(Expense.date >= datetime.strptime(start_date, '%Y-%m-%d'))
         if end_date:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d')
-            query = query.filter(Expense.date <= end_date)
-        
-        if selected_category:
-            query = query.filter(Expense.category_id == selected_category)
-        
-        if selected_project:
-            query = query.filter(Expense.project_id == selected_project)
-        
-        if selected_supplier:
-            query = query.filter(Expense.supplier_id == selected_supplier)
-        
-        if selected_trip:
-            query = query.filter(Expense.trip_id == selected_trip)
-        
-        if selected_currency:
-            query = query.filter(Expense.currency == selected_currency)
+            query = query.filter(Expense.date <= datetime.strptime(end_date, '%Y-%m-%d'))
+        if category:
+            query = query.filter(Expense.category_id == category)
+        if project:
+            query = query.filter(Expense.project_id == project)
+        if supplier:
+            query = query.filter(Expense.supplier_id == supplier)
+        if trip:
+            query = query.filter(Expense.trip_id == trip)
+        if currency:
+            query = query.filter(Expense.currency == currency)
 
     expenses = query.order_by(Expense.date.desc()).all()
     total_amount = sum(expense.nok_amount for expense in expenses)
 
-    summary = {
-        'total_amount': total_amount,
-        'count': len(expenses)
-    }
-
+    summary = {}
     if expenses:
         summary['avg_amount'] = total_amount / len(expenses)
-        summary['date_range'] = {
-            'start': min(expense.date for expense in expenses),
-            'end': max(expense.date for expense in expenses)
-        }
+        if start_date or end_date:
+            summary['date_range'] = {
+                'start': datetime.strptime(start_date, '%Y-%m-%d') if start_date else expenses[-1].date,
+                'end': datetime.strptime(end_date, '%Y-%m-%d') if end_date else expenses[0].date
+            }
 
-    categories = ExpenseCategory.query.all()
-    projects = Project.query.filter_by(user_id=current_user.id).all()
-    suppliers = Supplier.query.filter_by(organization_id=current_user.organization_id).all()
-    trips = Trip.query.filter_by(user_id=current_user.id).all()
-    currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
-
-    return render_template('expenses.html', 
+    selected_category = request.form.get('category')
+    selected_project = request.form.get('project')
+    selected_supplier = request.form.get('supplier')
+    selected_trip = request.form.get('trip')
+    selected_currency = request.form.get('currency')
+    
+    return render_template('expenses.html',
                          expenses=expenses,
-                         total_amount=total_amount,
-                         summary=summary,
                          categories=categories,
                          projects=projects,
                          suppliers=suppliers,
                          trips=trips,
                          currencies=currencies,
-                         start_date=start_date,
-                         end_date=end_date,
+                         total_amount=total_amount,
+                         summary=summary,
                          selected_category=selected_category,
                          selected_project=selected_project,
                          selected_supplier=selected_supplier,

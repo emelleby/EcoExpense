@@ -103,6 +103,14 @@ args = "Final Migration Fix"
 task = "workflow.run"
 args = "Flask App Final Fix"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Final Fix Migration"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Final Migration All Fix"
+
 [[workflows.workflow]]
 name = "Start Flask App"
 author = "agent"
@@ -382,7 +390,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db upgrade"
+args = "flask db upgrade heads"
 
 [[workflows.workflow]]
 name = "Final Flask App"
@@ -427,6 +435,34 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "python main.py"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Final Fix Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade heads"
+
+[[workflows.workflow]]
+name = "Final Migration All Fix"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade heads"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
