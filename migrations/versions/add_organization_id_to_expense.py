@@ -1,8 +1,8 @@
 """add organization_id to expense table
 
-Revision ID: add_org_id_to_expense
-Revises: remove_organization_id
-Create Date: 2024-10-31 17:10:00.000000
+Revision ID: add_organization_id_to_expense
+Revises: ff120b81eba9
+Create Date: 2024-10-31 17:25:00.000000
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
-revision = 'add_org_id_to_expense'
-down_revision = 'remove_organization_id'
+revision = 'add_organization_id_to_expense'
+down_revision = 'ff120b81eba9'
 branch_labels = None
 depends_on = None
 

@@ -71,6 +71,10 @@ args = "Apply Migrations"
 task = "workflow.run"
 args = "DB Migration"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Merge Migrations"
+
 [[workflows.workflow]]
 name = "Start Flask App"
 author = "agent"
@@ -138,7 +142,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db merge heads -m 'merge_multiple_heads'"
+args = "flask db merge heads -m 'merge_all_heads'"
 
 [[workflows.workflow]]
 name = "DB Upgrade"
@@ -280,6 +284,20 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "flask db upgrade"
+
+[[workflows.workflow]]
+name = "Merge Migrations"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db merge heads -m 'merge_all_heads'"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
