@@ -232,7 +232,7 @@ def add_expense():
             trip_id=trip_id,
             project_id=project_id,
             kilometers=kilometers,
-            fuel_type=fuel_type,
+            fuel_type=fuel_type if fuel_type is not None else '',  # Ensure fuel_type is a string
             fuel_amount_liters=fuel_amount_liters,
             scope1_co2_emissions=scope1_co2_emissions,
             scope3_co2_emissions=scope3_co2_emissions,
