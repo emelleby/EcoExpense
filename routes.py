@@ -67,8 +67,9 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        flash('Registration successful. Please login.', 'success')
-        return redirect(url_for('login'))
+        login_user(user)
+        flash('Registration successful! Welcome to EcoExpenseTracker.', 'success')
+        return redirect(url_for('index'))
     
     return render_template('register.html', organizations=organizations)
 
@@ -113,13 +114,15 @@ def create_organization():
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
+
+            login_user(user)
             
             session.pop('username', None)
             session.pop('email', None)
             session.pop('password', None)
             
-            flash('Organization created successfully. Please login.', 'success')
-            return redirect(url_for('login'))
+            flash('Organization created successfully! Welcome to EcoExpenseTracker.', 'success')
+            return redirect(url_for('index'))
         
         flash('Error creating user', 'danger')
         return redirect(url_for('register'))
@@ -293,7 +296,8 @@ def add_expense():
             fuel_amount_liters=fuel_amount_liters,
             scope1_co2_emissions=scope1_co2_emissions,
             scope3_co2_emissions=scope3_co2_emissions,
-            kwh=kwh
+            kwh=kwh,
+            # organization_id=current_user.organization_id
         )
         
         db.session.add(expense)
