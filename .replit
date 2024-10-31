@@ -169,7 +169,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db revision -m 'add_organization_id_to_expense_category'"
+args = "flask db revision -m 'remove_organization_id_from_expense_category'"
 
 [[workflows.workflow]]
 name = "Merge Migration Heads"

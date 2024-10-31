@@ -154,14 +154,18 @@ def create_organization():
             user.set_password(reg_data['password'])
             db.session.add(user)
 
-            # Create default expense categories for the organization
+            # Create default expense categories without organization_id
             default_categories = [
                 'Travel', 'Food', 'Accommodation', 'Office Supplies',
                 'Car - distance-based allowance', 'Fuel Expenses'
             ]
+            existing_categories = ExpenseCategory.query.all()
+            existing_names = {cat.name for cat in existing_categories}
+            
             for category_name in default_categories:
-                category = ExpenseCategory(name=category_name, organization_id=org.id)
-                db.session.add(category)
+                if category_name not in existing_names:
+                    category = ExpenseCategory(name=category_name)
+                    db.session.add(category)
 
             db.session.commit()
             session.pop('registration_data', None)
@@ -386,7 +390,7 @@ def add_expense():
         flash('Expense added successfully! <a href="/add_expense" class="btn btn-primary btn-sm ms-3">Add Another</a>', 'success')
         return redirect(url_for('expenses'))
 
-    categories = ExpenseCategory.query.filter_by(organization_id=current_user.organization_id).all()
+    categories = ExpenseCategory.query.all()
     trips = Trip.query.filter_by(user_id=current_user.id).all()
     projects = Project.query.filter_by(user_id=current_user.id).all()
     suppliers = Supplier.query.filter_by(organization_id=current_user.organization_id).all()
@@ -459,7 +463,7 @@ def expenses():
             'end': max(expense.date for expense in expenses)
         }
 
-    categories = ExpenseCategory.query.filter_by(organization_id=current_user.organization_id).all()
+    categories = ExpenseCategory.query.all()
     projects = Project.query.filter_by(user_id=current_user.id).all()
     suppliers = Supplier.query.filter_by(organization_id=current_user.organization_id).all()
     trips = Trip.query.filter_by(user_id=current_user.id).all()

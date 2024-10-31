@@ -10,7 +10,6 @@ class Organization(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     users = db.relationship('User', backref='organization', lazy='dynamic')
-    expense_categories = db.relationship('ExpenseCategory', backref='organization', lazy='dynamic')
 
     def __init__(self, name, description=None):
         self.name = name
@@ -108,15 +107,13 @@ class Project(db.Model):
 class ExpenseCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
-    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     expenses = db.relationship('Expense', backref='category', lazy=True)
 
-    def __init__(self, name, organization_id):
+    def __init__(self, name):
         self.name = name
-        self.organization_id = organization_id
 
     __table_args__ = (
-        db.UniqueConstraint('name', 'organization_id', name='_name_org_uc'),
+        db.UniqueConstraint('name', name='_name_uc'),
     )
 
 class Expense(db.Model):
