@@ -128,11 +128,12 @@ class Expense(db.Model):
     fuel_amount_liters = db.Column(db.Float, nullable=False, default=0.0)
     scope1_co2_emissions = db.Column(db.Float, nullable=False, default=0.0)
     scope3_co2_emissions = db.Column(db.Float, nullable=False, default=0.0)
+    kwh = db.Column(db.Float, nullable=False, default=0.0)
 
     def __init__(self, amount, currency, exchange_rate, nok_amount, date, description, 
                  supplier_id, category_id, user_id, trip_id=None, project_id=None,
                  kilometers=0.0, fuel_type='', fuel_amount_liters=0.0,
-                 scope1_co2_emissions=0.0, scope3_co2_emissions=0.0):
+                 scope1_co2_emissions=0.0, scope3_co2_emissions=0.0, kwh=0.0):
         self.amount = amount
         self.currency = currency
         self.exchange_rate = exchange_rate
@@ -149,3 +150,4 @@ class Expense(db.Model):
         self.fuel_amount_liters = fuel_amount_liters
         self.scope1_co2_emissions = scope1_co2_emissions
         self.scope3_co2_emissions = scope3_co2_emissions
+        self.kwh = kwh
