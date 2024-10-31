@@ -142,17 +142,17 @@
     // Initialize fuel types data from Flask
     const fuelTypes = {{ fuel_types|tojson|safe }};
     
-    document.getElementById('supplier').addEventListener('input', function(e) {
-        const input = e.target.value.toLowerCase();
-        if (input.length >= 2) {
-            fetch('/api/search_suppliers?q=' + encodeURIComponent(input))
-                .then(response => response.json())
-                .then(suppliers => {
-                    const datalist = document.getElementById('supplier-list');
-                    datalist.innerHTML = suppliers.map(s => `<option value="${s}">`).join('');
-                });
-        }
-    });
+    function calculateAmount() {
+        const km = parseFloat(document.getElementById('kilometers').value) || 0;
+        let factor = parseFloat(document.getElementById('factor').value) || 3.5;
+        
+        if (document.getElementById('passenger').checked) factor += 1.0;
+        if (document.getElementById('trailer').checked) factor += 1.0;
+        
+        const amountInput = document.getElementById('amount');
+        const amount = km * factor;
+        amountInput.value = amount.toFixed(2);
+    }
 
     function calculateCarEmissions() {
         const fuelType = document.getElementById('fuel_type_dist').value;
@@ -195,10 +195,60 @@
         document.getElementById('fuel-kwh').textContent = kwh.toFixed(2);
     }
 
+    document.getElementById('supplier').addEventListener('input', function(e) {
+        const input = e.target.value.toLowerCase();
+        if (input.length >= 2) {
+            fetch('/api/search_suppliers?q=' + encodeURIComponent(input))
+                .then(response => response.json())
+                .then(suppliers => {
+                    const datalist = document.getElementById('supplier-list');
+                    datalist.innerHTML = suppliers.map(s => `<option value="${s}">`).join('');
+                });
+        }
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
         const categorySelect = document.getElementById('category');
         const date = document.getElementById('date');
         date.valueAsDate = new Date();
+
+        function setupCarExpenseListeners() {
+            const kmInput = document.getElementById('kilometers');
+            const factorInput = document.getElementById('factor');
+            const passengerCheckbox = document.getElementById('passenger');
+            const trailerCheckbox = document.getElementById('trailer');
+            const fuelTypeSelect = document.getElementById('fuel_type_dist');
+            const fuelAmountInput = document.getElementById('car_fuel_amount');
+
+            kmInput.addEventListener('input', function() {
+                calculateAmount();
+                calculateCarEmissions();
+            });
+            factorInput.addEventListener('input', calculateAmount);
+            passengerCheckbox.addEventListener('change', calculateAmount);
+            trailerCheckbox.addEventListener('change', calculateAmount);
+            fuelTypeSelect.addEventListener('change', calculateCarEmissions);
+            fuelAmountInput.addEventListener('input', calculateCarEmissions);
+        }
+
+        function setupFuelExpenseListeners() {
+            const fuelTypeSelect = document.getElementById('fuel_type');
+            const fuelAmountInput = document.getElementById('fuel_amount');
+
+            fuelTypeSelect.addEventListener('change', calculateFuelEmissions);
+            fuelAmountInput.addEventListener('input', calculateFuelEmissions);
+        }
+
+        function clearAllListeners() {
+            const elements = ['kilometers', 'factor', 'passenger', 'trailer', 'fuel_type_dist', 'car_fuel_amount', 'fuel_type', 'fuel_amount'];
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    const clone = element.cloneNode(true);
+                    element.parentNode.replaceChild(clone, element);
+                }
+            });
+        }
 
         if (categorySelect) {
             categorySelect.addEventListener('change', function() {
@@ -210,47 +260,18 @@
                 const fuelFields = document.getElementById('fuel-expense-fields');
                 const amountInput = document.getElementById('amount');
 
-                // Remove existing event listeners
-                const oldCarFuelAmount = document.getElementById('car_fuel_amount');
-                const oldFuelAmount = document.getElementById('fuel_amount');
-                if (oldCarFuelAmount) {
-                    oldCarFuelAmount.removeEventListener('input', calculateCarEmissions);
-                }
-                if (oldFuelAmount) {
-                    oldFuelAmount.removeEventListener('input', calculateFuelEmissions);
-                }
+                clearAllListeners();
 
                 if (selectedText === 'Fuel Expenses') {
                     if (fuelFields) fuelFields.style.display = 'block';
                     if (carFields) carFields.style.display = 'none';
                     amountInput.readOnly = false;
-
-                    // Add event listeners for fuel expenses
-                    document.getElementById('fuel_type').addEventListener('change', calculateFuelEmissions);
-                    document.getElementById('fuel_amount').addEventListener('input', calculateFuelEmissions);
-                    
+                    setupFuelExpenseListeners();
                 } else if (selectedText === 'Car - distance-based allowance') {
                     if (carFields) carFields.style.display = 'block';
                     if (fuelFields) fuelFields.style.display = 'none';
                     amountInput.readOnly = true;
-                    
-                    // Add event listeners for car expenses
-                    document.getElementById('fuel_type_dist').addEventListener('change', calculateCarEmissions);
-                    document.getElementById('car_fuel_amount').addEventListener('input', calculateCarEmissions);
-                    document.getElementById('kilometers').addEventListener('input', function() {
-                        calculateAmount();
-                        calculateCarEmissions();
-                    });
-                    
-                    const kmInput = document.getElementById('kilometers');
-                    const factorInput = document.getElementById('factor');
-                    
-                    // Add calculation listeners
-                    kmInput.addEventListener('input', calculateAmount);
-                    factorInput.addEventListener('input', calculateAmount);
-                    document.getElementById('passenger').addEventListener('change', calculateAmount);
-                    document.getElementById('trailer').addEventListener('change', calculateAmount);
-                    
+                    setupCarExpenseListeners();
                 } else {
                     if (carFields) carFields.style.display = 'none';
                     if (fuelFields) fuelFields.style.display = 'none';
@@ -259,17 +280,5 @@
             });
         }
     });
-
-    function calculateAmount() {
-        const km = parseFloat(document.getElementById('kilometers').value) || 0;
-        let factor = parseFloat(document.getElementById('factor').value) || 3.5;
-        
-        if (document.getElementById('passenger').checked) factor += 1.0;
-        if (document.getElementById('trailer').checked) factor += 1.0;
-        
-        const amountInput = document.getElementById('amount');
-        const amount = km * factor;
-        amountInput.value = amount.toFixed(2);
-    }
 </script>
 {% endblock %}

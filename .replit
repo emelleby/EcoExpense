@@ -39,6 +39,10 @@ args = "DB Upgrade"
 task = "workflow.run"
 args = "Flask App"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Create Migration"
+
 [[workflows.workflow]]
 name = "Start Flask App"
 author = "agent"
@@ -123,6 +127,20 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python main.py"
+
+[[workflows.workflow]]
+name = "Create Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db revision -m 'add_kwh_column_to_expense_model'"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
