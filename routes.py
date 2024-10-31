@@ -203,36 +203,25 @@ def add_expense():
         scope1_co2_emissions = 0.0
         scope3_co2_emissions = 0.0
         kwh = 0.0
-        # co2_emissions = None
 
         if category and category.name == 'Car - distance-based allowance':
-            kilometers = float(request.form.get('distance_kilometers', 0))
-            fuel_type = request.form.get('fuel_type_dist')
-            fuel_amount_liters = float(request.form.get('fuel_amount_liters_dist', 0))
+            kilometers = float(request.form.get('kilometers', '0') or '0')
+            fuel_type = request.form.get('fuel_type_dist', '')
+            fuel_amount_liters = float(request.form.get('fuel_amount_liters_dist', '0') or '0')
 
             if fuel_type in fuel_types:
-                scope1_co2_emissions = fuel_amount_liters_dist * fuel_types[fuel_type]["scope1"]
-                scope3_co2_emissions = fuel_amount_liters_dist * fuel_types[fuel_type]["scope3"]
-                kwh = fuel_amount_liters_dist * fuel_types[fuel_type]["kwh"]
-                # TODO - Calculate kwh
-            else:
-                scope1_co2_emissions = 0
-                scope3_co2_emissions = 0
-                kwh = 0.0
-            # TODO - Calculate emissions based on distance and fuel type and consumption and kwh
+                total_fuel_consumption = (fuel_amount_liters * kilometers) / 100
+                scope1_co2_emissions = total_fuel_consumption * fuel_types[fuel_type]["scope1"]
+                scope3_co2_emissions = total_fuel_consumption * fuel_types[fuel_type]["scope3"]
+                kwh = total_fuel_consumption * fuel_types[fuel_type]["kwh"]
         elif category and category.name == 'Fuel Expenses':
-            fuel_type = request.form.get('fuel_type')
-            fuel_amount_liters = float(request.form.get('fuel_amount_liters', 0))
+            fuel_type = request.form.get('fuel_type', '')
+            fuel_amount_liters = float(request.form.get('fuel_amount_liters', '0') or '0')
 
             if fuel_type in fuel_types:
                 scope1_co2_emissions = fuel_amount_liters * fuel_types[fuel_type]["scope1"]
                 scope3_co2_emissions = fuel_amount_liters * fuel_types[fuel_type]["scope3"]
                 kwh = fuel_amount_liters * fuel_types[fuel_type]["kwh"]
-                # TODO - Calculate kwh
-            else:
-                scope1_co2_emissions = 0
-                scope3_co2_emissions = 0
-                kwh = 0.0
 
         new_expense = Expense(
             amount=amount,
@@ -247,7 +236,7 @@ def add_expense():
             trip_id=trip_id,
             project_id=project_id,
             kilometers=kilometers,
-            fuel_type=fuel_type if fuel_type is not None else '',  # Ensure fuel_type is a string
+            fuel_type=fuel_type,
             fuel_amount_liters=fuel_amount_liters,
             scope1_co2_emissions=scope1_co2_emissions,
             scope3_co2_emissions=scope3_co2_emissions,
@@ -255,7 +244,7 @@ def add_expense():
         )
         db.session.add(new_expense)
         db.session.commit()
-        flash('Expense added successfully!', 'success')
+        flash('Expense added successfully! <a href="/add_expense" class="btn btn-primary btn-sm ms-3">Add Another</a>', 'success')
         return redirect(url_for('expenses'))
 
     categories = ExpenseCategory.query.all()
@@ -263,15 +252,6 @@ def add_expense():
     projects = Project.query.filter_by(user_id=current_user.id).all()
     suppliers = Supplier.query.all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
-    # fuel_types = ['gasoline', 'diesel', 'biodiesel']
-    # fuel_types = {
-    #     "Gasoline": {
-    #         "scope1": 2.17, "Scope3": 0.61
-    #         }, 
-    #     "Diesel": {
-    #         "scope1": 2.54, "Scope3": 0.62
-    #         }
-    #     }
     return render_template('add_expense.html', 
                          categories=categories,
                          trips=trips, 
@@ -341,9 +321,9 @@ def expenses():
         }
 
     categories = ExpenseCategory.query.all()
-    projects = Project.query.filter_by(user_id=current_user.id).all() or []
+    projects = Project.query.filter_by(user_id=current_user.id).all()
     suppliers = Supplier.query.all()
-    trips = Trip.query.filter_by(user_id=current_user.id).all() or []
+    trips = Trip.query.filter_by(user_id=current_user.id).all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
 
     return render_template('expenses.html', 
@@ -444,34 +424,34 @@ def manage_users(org_id):
                          roles=roles,
                          stats=stats)
 
-@app.route('/manage_roles/<int:org_id>', methods=['GET', 'POST'])
+@app.route('/manage_organization_roles/<int:org_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def manage_organization_roles(org_id):
     organization = Organization.query.get_or_404(org_id)
+    
     if request.method == 'POST':
-        name = request.form['name']
-        new_role = Role(name=name, organization_id=org_id)
+        role_name = request.form['name']
+        new_role = Role(name=role_name, organization_id=org_id)
         db.session.add(new_role)
         db.session.commit()
         flash('Role added successfully!', 'success')
-        return redirect(url_for('manage_organization_roles', org_id=org_id))
 
     roles = Role.query.filter_by(organization_id=org_id).all()
-    return render_template('manage_roles.html', organization=organization, roles=roles)
+    return render_template('manage_roles.html',
+                         organization=organization,
+                         roles=roles)
 
 @app.route('/update_user_role/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def update_user_role(user_id):
     user = User.query.get_or_404(user_id)
-    if user.organization_id != current_user.organization_id and not current_user.is_admin:
-        flash('You can only update roles for users in your organization.', 'danger')
-        return redirect(url_for('index'))
-
-    role_id = request.form.get('role_id')
-    if role_id:
-        user.role_id = role_id
+    new_role_id = request.form.get('role_id')
+    
+    if new_role_id:
+        user.role_id = new_role_id
         db.session.commit()
         flash('User role updated successfully!', 'success')
+    
     return redirect(url_for('manage_users', org_id=user.organization_id))
