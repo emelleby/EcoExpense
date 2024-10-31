@@ -111,12 +111,43 @@ args = "Final Fix Migration"
 task = "workflow.run"
 args = "Final Migration All Fix"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Apply Supplier Migration"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flask App Updated"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Final Migration All Tables"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Apply New Migration"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Flask App New"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Apply Final Fix Migration"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Apply Migration Fix"
+
 [[workflows.workflow]]
 name = "Start Flask App"
 author = "agent"
 
 [workflows.workflow.metadata]
 agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
@@ -452,6 +483,106 @@ args = "flask db upgrade heads"
 
 [[workflows.workflow]]
 name = "Final Migration All Fix"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade heads"
+
+[[workflows.workflow]]
+name = "Apply Supplier Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade heads"
+
+[[workflows.workflow]]
+name = "Flask App Updated"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Final Migration All Tables"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade heads"
+
+[[workflows.workflow]]
+name = "Apply New Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade heads"
+
+[[workflows.workflow]]
+name = "Flask App New"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Apply Final Fix Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade heads"
+
+[[workflows.workflow]]
+name = "Apply Migration Fix"
 author = "agent"
 
 [workflows.workflow.metadata]
