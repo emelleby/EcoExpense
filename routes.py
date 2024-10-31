@@ -5,6 +5,7 @@ from models import User, Supplier, Trip, Project, ExpenseCategory, Expense, Orga
 from datetime import datetime
 from sqlalchemy import func, case
 from utils import admin_required, same_organization_required
+import re
 
 fuel_types = {
     "Gasoline": {
@@ -29,11 +30,24 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash('Logged in successfully.', 'success')
-            return redirect(url_for('index'))
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
         else:
             flash('Invalid username or password', 'danger')
     
     return render_template('login.html')
+
+def validate_password(password):
+    """Validate password requirements"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    if not re.search("[A-Z]", password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search("[a-z]", password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search("[0-9]", password):
+        return False, "Password must contain at least one number"
+    return True, ""
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -42,6 +56,19 @@ def register():
         email = request.form['email']
         password = request.form['password']
         organization_id = request.form['organization']
+
+        if not username or len(username) < 3:
+            flash('Username must be at least 3 characters long', 'danger')
+            return redirect(url_for('register'))
+
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            flash('Please enter a valid email address', 'danger')
+            return redirect(url_for('register'))
+
+        is_valid, msg = validate_password(password)
+        if not is_valid:
+            flash(msg, 'danger')
+            return redirect(url_for('register'))
 
         if User.query.filter_by(username=username).first():
             flash('Username already exists', 'danger')
@@ -52,31 +79,41 @@ def register():
             return redirect(url_for('register'))
 
         if organization_id == 'new':
+            session['registration_data'] = {
+                'username': username,
+                'email': email,
+                'password': password
+            }
             return redirect(url_for('create_organization'))
 
-        user = User(username=username, email=email, organization_id=organization_id)
-        user.set_password(password)
-        
-        # Assign default role for the organization
-        default_role = Role.query.filter_by(organization_id=organization_id, name='User').first()
-        if not default_role:
-            default_role = Role(name='User', organization_id=organization_id)
-            db.session.add(default_role)
+        try:
+            user = User(username=username, email=email, organization_id=organization_id)
+            user.set_password(password)
+            
+            default_role = Role.query.filter_by(organization_id=organization_id, name='User').first()
+            if not default_role:
+                default_role = Role(name='User', organization_id=organization_id)
+                db.session.add(default_role)
+                db.session.commit()
+            
+            user.role_id = default_role.id
+            db.session.add(user)
             db.session.commit()
-        
-        user.role_id = default_role.id
-        db.session.add(user)
-        db.session.commit()
-        
-        flash('Registration successful! Please login.', 'success')
-        return redirect(url_for('login'))
+            
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred during registration. Please try again.', 'danger')
+            app.logger.error(f"Registration error: {str(e)}")
+            return redirect(url_for('register'))
 
     organizations = Organization.query.all()
     return render_template('register.html', organizations=organizations)
 
 @app.route('/create_organization', methods=['GET', 'POST'])
 def create_organization():
-    if 'username' not in session:
+    if 'registration_data' not in session:
         flash('Please fill in registration details first', 'danger')
         return redirect(url_for('register'))
 
@@ -84,39 +121,46 @@ def create_organization():
         name = request.form['name']
         description = request.form['description']
 
+        if not name or len(name) < 3:
+            flash('Organization name must be at least 3 characters long', 'danger')
+            return redirect(url_for('create_organization'))
+
         if Organization.query.filter_by(name=name).first():
             flash('Organization name already exists', 'danger')
             return redirect(url_for('create_organization'))
 
-        org = Organization(name=name, description=description)
-        db.session.add(org)
-        db.session.commit()
+        try:
+            org = Organization(name=name, description=description)
+            db.session.add(org)
+            db.session.flush()
 
-        # Create default roles for the organization
-        admin_role = Role(name='Admin', organization_id=org.id)
-        user_role = Role(name='User', organization_id=org.id)
-        db.session.add(admin_role)
-        db.session.add(user_role)
+            admin_role = Role(name='Admin', organization_id=org.id)
+            user_role = Role(name='User', organization_id=org.id)
+            db.session.add(admin_role)
+            db.session.add(user_role)
+            db.session.flush()
 
-        # Create the user as an admin
-        user = User(
-            username=session['username'],
-            email=session['email'],
-            organization_id=org.id,
-            role_id=admin_role.id,
-            is_admin=True
-        )
-        user.set_password(session['password'])
-        db.session.add(user)
-        db.session.commit()
+            reg_data = session['registration_data']
+            user = User(
+                username=reg_data['username'],
+                email=reg_data['email'],
+                organization_id=org.id,
+                role_id=admin_role.id,
+                is_admin=True
+            )
+            user.set_password(reg_data['password'])
+            db.session.add(user)
+            db.session.commit()
 
-        # Clear session
-        session.pop('username', None)
-        session.pop('email', None)
-        session.pop('password', None)
+            session.pop('registration_data', None)
 
-        flash('Organization created and registration completed! Please login.', 'success')
-        return redirect(url_for('login'))
+            flash('Organization created and registration completed! Please login.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred while creating the organization. Please try again.', 'danger')
+            app.logger.error(f"Organization creation error: {str(e)}")
+            return redirect(url_for('create_organization'))
 
     return render_template('create_organization.html')
 
