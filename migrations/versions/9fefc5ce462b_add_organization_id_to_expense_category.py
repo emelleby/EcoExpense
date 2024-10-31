@@ -1,8 +1,8 @@
-"""add_kwh_column_to_expense_model
+"""add_organization_id_to_expense_category
 
-Revision ID: e5bbb6c2d255
-Revises: 46599494ecce
-Create Date: 2024-10-31 10:04:16.410832
+Revision ID: 9fefc5ce462b
+Revises: 029327f479c3
+Create Date: 2024-10-31 16:57:38.641495
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'e5bbb6c2d255'
-down_revision = '46599494ecce'
+revision = '9fefc5ce462b'
+down_revision = '029327f479c3'
 branch_labels = None
 depends_on = None
 
