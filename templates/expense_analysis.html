@@ -40,19 +40,19 @@
         <div class="summary-card">
             <div class="card-body">
                 <h5 class="card-title">Scope 1 Emissions</h5>
-                <p class="h3" id="scope1Emissions">0 kg CO2</p>
+                <p class="h3" id="scope1Emissions">0 kg CO2e</p>
             </div>
         </div>
         <div class="summary-card">
             <div class="card-body">
                 <h5 class="card-title">Scope 3 Emissions</h5>
-                <p class="h3" id="scope3Emissions">0 kg CO2</p>
+                <p class="h3" id="scope3Emissions">0 kg CO2e</p>
             </div>
         </div>
         <div class="summary-card">
             <div class="card-body">
                 <h5 class="card-title">Total Emissions</h5>
-                <p class="h3" id="totalEmissions">0 kg CO2</p>
+                <p class="h3" id="totalEmissions">0 kg CO2e</p>
             </div>
         </div>
     </div>
@@ -103,11 +103,15 @@
                 responsive: true,
                 plugins: {
                     legend: {
-                        position: 'top',
+                        position: 'bottom',
+                        labels: {
+                            color: '#ffffff'  // Set legend text color to white
+                        }
                     },
                     title: {
                         display: true,
-                        text: chartTitle
+                        text: chartTitle,
+                        color: '#ffffff'  // Also update title color for consistency
                     }
                 }
             }
@@ -141,10 +145,10 @@
         fetch('/api/expense_summary' + url)
             .then(response => response.json())
             .then(data => {
-                document.getElementById('totalAmount').textContent = data.total_amount.toFixed(2) + ' NOK';
-                document.getElementById('scope1Emissions').textContent = data.scope1_emissions.toFixed(2) + ' kg CO2';
-                document.getElementById('scope3Emissions').textContent = data.scope3_emissions.toFixed(2) + ' kg CO2';
-                document.getElementById('totalEmissions').textContent = data.total_emissions.toFixed(2) + ' kg CO2';
+                document.getElementById('totalAmount').textContent = 'NOK ' + data.total_amount.toFixed(2);
+                document.getElementById('scope1Emissions').textContent = data.scope1_emissions.toFixed(2) + ' kg CO2e';
+                document.getElementById('scope3Emissions').textContent = data.scope3_emissions.toFixed(2) + ' kg CO2e';
+                document.getElementById('totalEmissions').textContent = data.total_emissions.toFixed(2) + ' kg CO2e';
             });
 
         // Update existing charts
