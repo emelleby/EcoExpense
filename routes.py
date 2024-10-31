@@ -374,7 +374,9 @@ def suppliers():
 @app.route('/expense_analysis')
 @login_required
 def expense_analysis():
-    return render_template('expense_analysis.html')
+    trips = Trip.query.filter_by(user_id=current_user.id).all()
+    projects = Project.query.filter_by(user_id=current_user.id).all()
+    return render_template('expense_analysis.html', trips=trips, projects=projects)
 
 @app.route('/api/search_suppliers')
 @login_required
@@ -386,20 +388,40 @@ def search_suppliers():
 @app.route('/api/supplier_expenses')
 @login_required
 def supplier_expenses():
-    supplier_expenses = db.session.query(
+    query = db.session.query(
         Supplier.name,
         func.sum(Expense.nok_amount).label('total_amount')
-    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(Supplier.name).all()
+    ).join(Expense).filter(Expense.user_id == current_user.id)
+
+    trip_id = request.args.get('trip_id')
+    project_id = request.args.get('project_id')
+
+    if trip_id:
+        query = query.filter(Expense.trip_id == trip_id)
+    if project_id:
+        query = query.filter(Expense.project_id == project_id)
+
+    supplier_expenses = query.group_by(Supplier.name).all()
     
     return jsonify([{'name': se.name, 'total_amount': float(se.total_amount)} for se in supplier_expenses])
 
 @app.route('/api/category_expenses')
 @login_required
 def category_expenses():
-    category_expenses = db.session.query(
+    query = db.session.query(
         ExpenseCategory.name,
         func.sum(Expense.nok_amount).label('total_amount')
-    ).join(Expense).filter(Expense.user_id == current_user.id).group_by(ExpenseCategory.name).all()
+    ).join(Expense).filter(Expense.user_id == current_user.id)
+
+    trip_id = request.args.get('trip_id')
+    project_id = request.args.get('project_id')
+
+    if trip_id:
+        query = query.filter(Expense.trip_id == trip_id)
+    if project_id:
+        query = query.filter(Expense.project_id == project_id)
+
+    category_expenses = query.group_by(ExpenseCategory.name).all()
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
 
@@ -431,26 +453,30 @@ def manage_organization_roles(org_id):
     organization = Organization.query.get_or_404(org_id)
     
     if request.method == 'POST':
-        role_name = request.form['name']
-        new_role = Role(name=role_name, organization_id=org_id)
+        name = request.form['name']
+        new_role = Role(name=name, organization_id=org_id)
         db.session.add(new_role)
         db.session.commit()
         flash('Role added successfully!', 'success')
-
+        return redirect(url_for('manage_organization_roles', org_id=org_id))
+    
     roles = Role.query.filter_by(organization_id=org_id).all()
-    return render_template('manage_roles.html',
-                         organization=organization,
-                         roles=roles)
+    return render_template('manage_roles.html', organization=organization, roles=roles)
 
 @app.route('/update_user_role/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def update_user_role(user_id):
     user = User.query.get_or_404(user_id)
-    new_role_id = request.form.get('role_id')
+    role_id = request.form.get('role_id')
     
-    if new_role_id:
-        user.role_id = new_role_id
+    if role_id:
+        role = Role.query.get_or_404(role_id)
+        if role.organization_id != user.organization_id:
+            flash('Invalid role selection.', 'danger')
+            return redirect(url_for('manage_users', org_id=user.organization_id))
+        
+        user.role_id = role.id
         db.session.commit()
         flash('User role updated successfully!', 'success')
     

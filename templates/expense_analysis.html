@@ -3,6 +3,32 @@
 {% block content %}
 <h1 class="mb-4">Expense Analysis</h1>
 
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Filters</h5>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="trip" class="form-label">Trip</label>
+                <select class="form-select" id="trip">
+                    <option value="">All Trips</option>
+                    {% for trip in trips %}
+                    <option value="{{ trip.id }}">{{ trip.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="project" class="form-label">Project</label>
+                <select class="form-select" id="project">
+                    <option value="">All Projects</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}">{{ project.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-6 mb-4">
         <div class="card">
@@ -24,45 +50,82 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    function createChart(elementId, url, chartTitle) {
-        fetch(url)
+    let supplierChart = null;
+    let categoryChart = null;
+
+    function createChart(elementId, data, chartTitle) {
+        const ctx = document.getElementById(elementId).getContext('2d');
+        const chartConfig = {
+            type: 'pie',
+            data: {
+                labels: data.map(item => item.name),
+                datasets: [{
+                    data: data.map(item => item.total_amount),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                    ],
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: chartTitle
+                    }
+                }
+            }
+        };
+
+        if (elementId === 'supplierChart') {
+            if (supplierChart) {
+                supplierChart.destroy();
+            }
+            supplierChart = new Chart(ctx, chartConfig);
+        } else if (elementId === 'categoryChart') {
+            if (categoryChart) {
+                categoryChart.destroy();
+            }
+            categoryChart = new Chart(ctx, chartConfig);
+        }
+    }
+
+    function updateCharts() {
+        const tripId = document.getElementById('trip').value;
+        const projectId = document.getElementById('project').value;
+        
+        const params = new URLSearchParams();
+        if (tripId) params.append('trip_id', tripId);
+        if (projectId) params.append('project_id', projectId);
+        
+        const queryString = params.toString();
+        const url = queryString ? '?' + queryString : '';
+
+        fetch('/api/supplier_expenses' + url)
             .then(response => response.json())
             .then(data => {
-                const ctx = document.getElementById(elementId).getContext('2d');
-                new Chart(ctx, {
-                    type: 'pie',
-                    data: {
-                        labels: data.map(item => item.name),
-                        datasets: [{
-                            data: data.map(item => item.total_amount),
-                            backgroundColor: [
-                                'rgba(255, 99, 132, 0.8)',
-                                'rgba(54, 162, 235, 0.8)',
-                                'rgba(255, 206, 86, 0.8)',
-                                'rgba(75, 192, 192, 0.8)',
-                                'rgba(153, 102, 255, 0.8)',
-                            ],
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            title: {
-                                display: true,
-                                text: chartTitle
-                            }
-                        }
-                    }
-                });
+                createChart('supplierChart', data, 'Supplier-based Expenses');
+            });
+
+        fetch('/api/category_expenses' + url)
+            .then(response => response.json())
+            .then(data => {
+                createChart('categoryChart', data, 'Category-based Expenses');
             });
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        createChart('supplierChart', '/api/supplier_expenses', 'Supplier-based Expenses');
-        createChart('categoryChart', '/api/category_expenses', 'Category-based Expenses');
+        updateCharts();
+        
+        document.getElementById('trip').addEventListener('change', updateCharts);
+        document.getElementById('project').addEventListener('change', updateCharts);
     });
 </script>
 {% endblock %}
