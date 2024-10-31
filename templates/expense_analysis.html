@@ -29,6 +29,41 @@
     </div>
 </div>
 
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Amount</h5>
+                <p class="h3" id="totalAmount">0 NOK</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Scope 1 Emissions</h5>
+                <p class="h3" id="scope1Emissions">0 kg CO2</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Scope 3 Emissions</h5>
+                <p class="h3" id="scope3Emissions">0 kg CO2</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Total Emissions</h5>
+                <p class="h3" id="totalEmissions">0 kg CO2</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-6 mb-4">
         <div class="card">
@@ -108,6 +143,17 @@
         const queryString = params.toString();
         const url = queryString ? '?' + queryString : '';
 
+        // Update summary cards
+        fetch('/api/expense_summary' + url)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalAmount').textContent = data.total_amount.toFixed(2) + ' NOK';
+                document.getElementById('scope1Emissions').textContent = data.scope1_emissions.toFixed(2) + ' kg CO2';
+                document.getElementById('scope3Emissions').textContent = data.scope3_emissions.toFixed(2) + ' kg CO2';
+                document.getElementById('totalEmissions').textContent = data.total_emissions.toFixed(2) + ' kg CO2';
+            });
+
+        // Update existing charts
         fetch('/api/supplier_expenses' + url)
             .then(response => response.json())
             .then(data => {

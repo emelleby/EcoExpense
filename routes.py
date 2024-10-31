@@ -425,26 +425,38 @@ def category_expenses():
     
     return jsonify([{'name': ce.name, 'total_amount': float(ce.total_amount)} for ce in category_expenses])
 
+@app.route('/api/expense_summary')
+@login_required
+def expense_summary():
+    query = Expense.query.filter_by(user_id=current_user.id)
+    
+    trip_id = request.args.get('trip_id')
+    project_id = request.args.get('project_id')
+    
+    if trip_id:
+        query = query.filter(Expense.trip_id == trip_id)
+    if project_id:
+        query = query.filter(Expense.project_id == project_id)
+        
+    expenses = query.all()
+    
+    total_amount = sum(expense.nok_amount for expense in expenses)
+    total_scope1 = sum(expense.scope1_co2_emissions for expense in expenses)
+    total_scope3 = sum(expense.scope3_co2_emissions for expense in expenses)
+    
+    return jsonify({
+        'total_amount': float(total_amount),
+        'scope1_emissions': float(total_scope1),
+        'scope3_emissions': float(total_scope3),
+        'total_emissions': float(total_scope1 + total_scope3)
+    })
+
 @app.route('/organizations')
 @login_required
 @admin_required
 def organizations():
     orgs = Organization.query.all()
     return render_template('organizations.html', organizations=orgs)
-
-@app.route('/manage_users/<int:org_id>')
-@login_required
-@admin_required
-def manage_users(org_id):
-    organization = Organization.query.get_or_404(org_id)
-    users = User.query.filter_by(organization_id=org_id).all()
-    roles = Role.query.filter_by(organization_id=org_id).all()
-    stats = organization.get_statistics()
-    return render_template('manage_users.html', 
-                         organization=organization,
-                         users=users,
-                         roles=roles,
-                         stats=stats)
 
 @app.route('/manage_organization_roles/<int:org_id>', methods=['GET', 'POST'])
 @login_required
@@ -481,3 +493,19 @@ def update_user_role(user_id):
         flash('User role updated successfully!', 'success')
     
     return redirect(url_for('manage_users', org_id=user.organization_id))
+
+@app.route('/manage_users/<int:org_id>')
+@login_required
+@admin_required
+def manage_users(org_id):
+    organization = Organization.query.get_or_404(org_id)
+    users = User.query.filter_by(organization_id=org_id).all()
+    roles = Role.query.filter_by(organization_id=org_id).all()
+    
+    stats = organization.get_statistics()
+    
+    return render_template('manage_users.html',
+                         organization=organization,
+                         users=users,
+                         roles=roles,
+                         stats=stats)
