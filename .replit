@@ -114,7 +114,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db merge heads -m 'merge multiple heads'"
+args = "flask db merge heads -m 'merge_multiple_heads'"
 
 [[workflows.workflow]]
 name = "DB Upgrade"

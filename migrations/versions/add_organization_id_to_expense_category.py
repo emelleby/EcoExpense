@@ -7,7 +7,7 @@ Create Date: 2024-10-31 16:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import table, column
+from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision = 'add_organization_id_to_expense_category'
@@ -23,13 +23,13 @@ def upgrade():
     connection = op.get_bind()
     
     # Get the first organization's ID
-    org_id = connection.execute("SELECT id FROM organization ORDER BY id LIMIT 1").scalar()
+    org_id = connection.execute(text("SELECT id FROM organization ORDER BY id LIMIT 1")).scalar()
     
     if org_id is not None:
         # Update existing records to use the first organization's ID
         connection.execute(
-            "UPDATE expense_category SET organization_id = %s WHERE organization_id IS NULL",
-            (org_id,)
+            text("UPDATE expense_category SET organization_id = :org_id WHERE organization_id IS NULL"),
+            {"org_id": org_id}
         )
     
     # Create foreign key constraint
