@@ -23,9 +23,9 @@ def upgrade():
     connection = op.get_bind()
     connection.execute(text('''
         UPDATE expense 
-        SET organization_id = users.organization_id 
-        FROM users 
-        WHERE expense.user_id = users.id
+        SET organization_id = "user".organization_id 
+        FROM "user"
+        WHERE expense.user_id = "user".id
     '''))
     
     # Add foreign key constraint and make column not nullable
