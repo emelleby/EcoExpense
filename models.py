@@ -10,6 +10,7 @@ class Organization(db.Model):
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     users = db.relationship('User', backref='organization', lazy='dynamic')
+    expense_categories = db.relationship('ExpenseCategory', backref='organization', lazy='dynamic')
 
     def __init__(self, name, description=None):
         self.name = name
@@ -70,11 +71,13 @@ class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     contact = db.Column(db.String(100))
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     expenses = db.relationship('Expense', backref='supplier', lazy=True)
 
-    def __init__(self, name, contact):
+    def __init__(self, name, contact, organization_id):
         self.name = name
         self.contact = contact
+        self.organization_id = organization_id
 
 class Trip(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -104,11 +107,17 @@ class Project(db.Model):
 
 class ExpenseCategory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False, unique=True)
+    name = db.Column(db.String(50), nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     expenses = db.relationship('Expense', backref='category', lazy=True)
 
-    def __init__(self, name):
+    def __init__(self, name, organization_id):
         self.name = name
+        self.organization_id = organization_id
+
+    __table_args__ = (
+        db.UniqueConstraint('name', 'organization_id', name='_name_org_uc'),
+    )
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -123,6 +132,7 @@ class Expense(db.Model):
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     category_id = db.Column(db.Integer, db.ForeignKey('expense_category.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     kilometers = db.Column(db.Float, nullable=False, default=0.0)
     fuel_type = db.Column(db.String(50), nullable=False, default='')
     fuel_amount_liters = db.Column(db.Float, nullable=False, default=0.0)
@@ -131,7 +141,7 @@ class Expense(db.Model):
     kwh = db.Column(db.Float, nullable=False, default=0.0)
 
     def __init__(self, amount, currency, exchange_rate, nok_amount, date, description, 
-                 supplier_id, category_id, user_id, trip_id=None, project_id=None,
+                 supplier_id, category_id, user_id, organization_id, trip_id=None, project_id=None,
                  kilometers=0.0, fuel_type='', fuel_amount_liters=0.0,
                  scope1_co2_emissions=0.0, scope3_co2_emissions=0.0, kwh=0.0):
         self.amount = amount
@@ -143,6 +153,7 @@ class Expense(db.Model):
         self.supplier_id = supplier_id
         self.category_id = category_id
         self.user_id = user_id
+        self.organization_id = organization_id
         self.trip_id = trip_id
         self.project_id = project_id
         self.kilometers = kilometers

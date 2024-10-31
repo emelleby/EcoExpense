@@ -74,6 +74,9 @@ author = "agent"
 agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python main.py"
 waitForPort = 5000
@@ -141,7 +144,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db revision -m 'add_kwh_column_to_expense_model'"
+args = "flask db revision -m 'add_organization_id_to_expense_category'"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]

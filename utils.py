@@ -8,6 +8,12 @@ def admin_required(f):
         if not current_user.is_authenticated or not current_user.is_admin:
             flash('You need administrator privileges to access this page.', 'danger')
             return redirect(url_for('index'))
+        
+        # If org_id is in the URL parameters, check if user is admin of that org
+        if 'org_id' in kwargs and kwargs['org_id'] != current_user.organization_id:
+            flash('You can only access your own organization.', 'danger')
+            return redirect(url_for('index'))
+            
         return f(*args, **kwargs)
     return decorated_function
 

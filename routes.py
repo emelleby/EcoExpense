@@ -10,11 +10,11 @@ import re
 fuel_types = {
     "Gasoline": {
         "scope1": 2.17, "scope3": 0.61, "kwh": 9.7
-        }, 
+    }, 
     "Diesel": {
         "scope1": 2.54, "scope3": 0.62, "kwh": 10.7
-        }
     }
+}
 
 @app.route('/')
 def index():
@@ -38,7 +38,6 @@ def login():
     return render_template('login.html')
 
 def validate_password(password):
-    """Validate password requirements"""
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
     if not re.search("[A-Z]", password):
@@ -52,49 +51,54 @@ def validate_password(password):
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
-        organization_id = request.form['organization']
-
-        if not username or len(username) < 3:
-            flash('Username must be at least 3 characters long', 'danger')
-            return redirect(url_for('register'))
-
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            flash('Please enter a valid email address', 'danger')
-            return redirect(url_for('register'))
-
-        is_valid, msg = validate_password(password)
-        if not is_valid:
-            flash(msg, 'danger')
-            return redirect(url_for('register'))
-
-        if User.query.filter_by(username=username).first():
-            flash('Username already exists', 'danger')
-            return redirect(url_for('register'))
-
-        if User.query.filter_by(email=email).first():
-            flash('Email already registered', 'danger')
-            return redirect(url_for('register'))
-
-        if organization_id == 'new':
-            session['registration_data'] = {
-                'username': username,
-                'email': email,
-                'password': password
-            }
-            return redirect(url_for('create_organization'))
-
         try:
+            username = request.form['username']
+            email = request.form['email']
+            password = request.form['password']
+            organization_id = request.form['organization']
+
+            # Validate input
+            if not username or len(username) < 3:
+                flash('Username must be at least 3 characters long', 'danger')
+                return redirect(url_for('register'))
+
+            if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+                flash('Please enter a valid email address', 'danger')
+                return redirect(url_for('register'))
+
+            is_valid, msg = validate_password(password)
+            if not is_valid:
+                flash(msg, 'danger')
+                return redirect(url_for('register'))
+
+            # Check for existing username/email
+            if User.query.filter_by(username=username).first():
+                flash('Username already exists', 'danger')
+                return redirect(url_for('register'))
+
+            if User.query.filter_by(email=email).first():
+                flash('Email already registered', 'danger')
+                return redirect(url_for('register'))
+
+            # Handle new organization creation
+            if organization_id == 'new':
+                session['registration_data'] = {
+                    'username': username,
+                    'email': email,
+                    'password': password
+                }
+                return redirect(url_for('create_organization'))
+
+            # Create user with existing organization
             user = User(username=username, email=email, organization_id=organization_id)
             user.set_password(password)
             
+            # Set default role
             default_role = Role.query.filter_by(organization_id=organization_id, name='User').first()
             if not default_role:
                 default_role = Role(name='User', organization_id=organization_id)
                 db.session.add(default_role)
-                db.session.commit()
+                db.session.flush()
             
             user.role_id = default_role.id
             db.session.add(user)
@@ -102,10 +106,11 @@ def register():
             
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
+            
         except Exception as e:
             db.session.rollback()
-            flash('An error occurred during registration. Please try again.', 'danger')
             app.logger.error(f"Registration error: {str(e)}")
+            flash('An error occurred during registration. Please try again.', 'danger')
             return redirect(url_for('register'))
 
     organizations = Organization.query.all()
@@ -118,21 +123,22 @@ def create_organization():
         return redirect(url_for('register'))
 
     if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-
-        if not name or len(name) < 3:
-            flash('Organization name must be at least 3 characters long', 'danger')
-            return redirect(url_for('create_organization'))
-
-        if Organization.query.filter_by(name=name).first():
-            flash('Organization name already exists', 'danger')
-            return redirect(url_for('create_organization'))
-
         try:
+            name = request.form['name']
+            description = request.form['description']
+
+            if not name or len(name) < 3:
+                flash('Organization name must be at least 3 characters long', 'danger')
+                return redirect(url_for('create_organization'))
+
+            if Organization.query.filter_by(name=name).first():
+                flash('Organization name already exists', 'danger')
+                return redirect(url_for('create_organization'))
+
+            # Create organization and roles
             org = Organization(name=name, description=description)
             db.session.add(org)
-            db.session.flush()
+            db.session.flush()  # Get org.id without committing
 
             admin_role = Role(name='Admin', organization_id=org.id)
             user_role = Role(name='User', organization_id=org.id)
@@ -140,6 +146,7 @@ def create_organization():
             db.session.add(user_role)
             db.session.flush()
 
+            # Create user from stored registration data
             reg_data = session['registration_data']
             user = User(
                 username=reg_data['username'],
@@ -150,16 +157,25 @@ def create_organization():
             )
             user.set_password(reg_data['password'])
             db.session.add(user)
-            db.session.commit()
 
+            # Create default expense categories for the organization
+            default_categories = [
+                'Travel', 'Food', 'Accommodation', 'Office Supplies',
+                'Car - distance-based allowance', 'Fuel Expenses'
+            ]
+            for category_name in default_categories:
+                category = ExpenseCategory(name=category_name, organization_id=org.id)
+                db.session.add(category)
+
+            db.session.commit()
             session.pop('registration_data', None)
 
             flash('Organization created and registration completed! Please login.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
             db.session.rollback()
-            flash('An error occurred while creating the organization. Please try again.', 'danger')
             app.logger.error(f"Organization creation error: {str(e)}")
+            flash('An error occurred while creating the organization. Please try again.', 'danger')
             return redirect(url_for('create_organization'))
 
     return render_template('create_organization.html')
@@ -171,32 +187,109 @@ def logout():
     flash('Logged out successfully.', 'success')
     return redirect(url_for('index'))
 
+@app.route('/organizations')
+@login_required
+@admin_required
+def organizations():
+    organizations = Organization.query.filter_by(id=current_user.organization_id).all()
+    return render_template('organizations.html', organizations=organizations)
+
+@app.route('/manage_users/<int:org_id>')
+@login_required
+@admin_required
+def manage_users(org_id):
+    if org_id != current_user.organization_id:
+        flash('You can only manage users in your own organization.', 'danger')
+        return redirect(url_for('index'))
+
+    organization = Organization.query.get_or_404(org_id)
+    users = User.query.filter_by(organization_id=org_id).all()
+    roles = Role.query.filter_by(organization_id=org_id).all()
+    stats = organization.get_statistics()
+    
+    return render_template('manage_users.html', 
+                         organization=organization,
+                         users=users,
+                         roles=roles,
+                         stats=stats)
+
+@app.route('/manage_organization_roles/<int:org_id>', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def manage_organization_roles(org_id):
+    if org_id != current_user.organization_id:
+        flash('You can only manage roles in your own organization.', 'danger')
+        return redirect(url_for('index'))
+
+    organization = Organization.query.get_or_404(org_id)
+    
+    if request.method == 'POST':
+        name = request.form['name']
+        if name:
+            role = Role(name=name, organization_id=org_id)
+            db.session.add(role)
+            db.session.commit()
+            flash('Role added successfully!', 'success')
+            return redirect(url_for('manage_organization_roles', org_id=org_id))
+    
+    roles = Role.query.filter_by(organization_id=org_id).all()
+    return render_template('manage_roles.html', organization=organization, roles=roles)
+
+@app.route('/update_user_role/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def update_user_role(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    if user.organization_id != current_user.organization_id:
+        flash('You can only update roles for users in your organization.', 'danger')
+        return redirect(url_for('index'))
+    
+    role_id = request.form.get('role_id')
+    if role_id:
+        role = Role.query.get_or_404(role_id)
+        if role.organization_id != current_user.organization_id:
+            flash('Invalid role selected.', 'danger')
+        else:
+            user.role_id = role_id
+            db.session.commit()
+            flash('User role updated successfully.', 'success')
+    
+    return redirect(url_for('manage_users', org_id=user.organization_id))
+
 @app.route('/settings')
 @login_required
 def settings():
     try:
         trips = Trip.query.filter_by(user_id=current_user.id).all()
-    except Exception:
-        trips = []
-    
-    try:
         projects = Project.query.filter_by(user_id=current_user.id).all()
-    except Exception:
-        projects = []
-    
-    return render_template('settings.html', trips=trips or [], projects=projects or [])
+        return render_template('settings.html', trips=trips, projects=projects)
+    except Exception as e:
+        app.logger.error(f"Settings error: {str(e)}")
+        flash('Error loading settings. Please try again.', 'danger')
+        return render_template('settings.html', trips=[], projects=[])
 
 @app.route('/trips', methods=['GET', 'POST'])
 @login_required
 def trips():
     if request.method == 'POST':
-        name = request.form['name']
-        start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
-        end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d')
-        new_trip = Trip(name=name, start_date=start_date, end_date=end_date, user_id=current_user.id)
-        db.session.add(new_trip)
-        db.session.commit()
-        flash('Trip added successfully!', 'success')
+        try:
+            name = request.form['name']
+            start_date = datetime.strptime(request.form['start_date'], '%Y-%m-%d')
+            end_date = datetime.strptime(request.form['end_date'], '%Y-%m-%d')
+            
+            if start_date > end_date:
+                flash('Start date cannot be after end date', 'danger')
+                return redirect(url_for('settings'))
+                
+            new_trip = Trip(name=name, start_date=start_date, end_date=end_date, user_id=current_user.id)
+            db.session.add(new_trip)
+            db.session.commit()
+            flash('Trip added successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error adding trip. Please try again.', 'danger')
+            app.logger.error(f"Trip creation error: {str(e)}")
         return redirect(url_for('settings'))
 
     trips = Trip.query.filter_by(user_id=current_user.id).all()
@@ -206,12 +299,17 @@ def trips():
 @login_required
 def projects():
     if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-        new_project = Project(name=name, description=description, user_id=current_user.id)
-        db.session.add(new_project)
-        db.session.commit()
-        flash('Project added successfully!', 'success')
+        try:
+            name = request.form['name']
+            description = request.form['description']
+            new_project = Project(name=name, description=description, user_id=current_user.id)
+            db.session.add(new_project)
+            db.session.commit()
+            flash('Project added successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error adding project. Please try again.', 'danger')
+            app.logger.error(f"Project creation error: {str(e)}")
         return redirect(url_for('settings'))
 
     projects = Project.query.filter_by(user_id=current_user.id).all()
@@ -225,7 +323,7 @@ def add_expense():
         supplier = Supplier.query.filter(func.lower(Supplier.name) == func.lower(supplier_name)).first()
 
         if not supplier:
-            supplier = Supplier(name=supplier_name, contact='')
+            supplier = Supplier(name=supplier_name, contact='', organization_id=current_user.organization_id)
             db.session.add(supplier)
             db.session.commit()
 
@@ -277,6 +375,7 @@ def add_expense():
             supplier_id=supplier.id,
             category_id=category_id,
             user_id=current_user.id,
+            organization_id=current_user.organization_id,
             trip_id=trip_id,
             project_id=project_id,
             kilometers=kilometers,
@@ -291,10 +390,10 @@ def add_expense():
         flash('Expense added successfully! <a href="/add_expense" class="btn btn-primary btn-sm ms-3">Add Another</a>', 'success')
         return redirect(url_for('expenses'))
 
-    categories = ExpenseCategory.query.all()
+    categories = ExpenseCategory.query.filter_by(organization_id=current_user.organization_id).all()
     trips = Trip.query.filter_by(user_id=current_user.id).all()
     projects = Project.query.filter_by(user_id=current_user.id).all()
-    suppliers = Supplier.query.all()
+    suppliers = Supplier.query.filter_by(organization_id=current_user.organization_id).all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
     return render_template('add_expense.html', 
                          categories=categories,
@@ -307,7 +406,7 @@ def add_expense():
 @app.route('/expenses', methods=['GET', 'POST'])
 @login_required
 def expenses():
-    query = Expense.query.filter_by(user_id=current_user.id)
+    query = Expense.query.filter_by(user_id=current_user.id, organization_id=current_user.organization_id)
     
     start_date = None
     end_date = None
@@ -364,9 +463,9 @@ def expenses():
             'end': max(expense.date for expense in expenses)
         }
 
-    categories = ExpenseCategory.query.all()
+    categories = ExpenseCategory.query.filter_by(organization_id=current_user.organization_id).all()
     projects = Project.query.filter_by(user_id=current_user.id).all()
-    suppliers = Supplier.query.all()
+    suppliers = Supplier.query.filter_by(organization_id=current_user.organization_id).all()
     trips = Trip.query.filter_by(user_id=current_user.id).all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
 
@@ -391,7 +490,7 @@ def expenses():
 @login_required
 def delete_expense(expense_id):
     expense = Expense.query.get_or_404(expense_id)
-    if expense.user_id != current_user.id:
+    if expense.user_id != current_user.id or expense.organization_id != current_user.organization_id:
         flash('You are not authorized to delete this expense.', 'danger')
         return redirect(url_for('expenses'))
     
@@ -406,13 +505,13 @@ def suppliers():
     if request.method == 'POST':
         name = request.form['name']
         contact = request.form['contact']
-        new_supplier = Supplier(name=name, contact=contact)
+        new_supplier = Supplier(name=name, contact=contact, organization_id=current_user.organization_id)
         db.session.add(new_supplier)
         db.session.commit()
         flash('Supplier added successfully!', 'success')
         return redirect(url_for('suppliers'))
 
-    suppliers_list = Supplier.query.all()
+    suppliers_list = Supplier.query.filter_by(organization_id=current_user.organization_id).all()
     return render_template('suppliers.html', suppliers=suppliers_list)
 
 @app.route('/expense_analysis')
@@ -426,7 +525,10 @@ def expense_analysis():
 @login_required
 def search_suppliers():
     query = request.args.get('q', '').lower()
-    suppliers = Supplier.query.filter(func.lower(Supplier.name).contains(query)).all()
+    suppliers = Supplier.query.filter(
+        func.lower(Supplier.name).contains(query),
+        Supplier.organization_id == current_user.organization_id
+    ).all()
     return jsonify([s.name for s in suppliers])
 
 @app.route('/api/supplier_expenses')
@@ -435,7 +537,10 @@ def supplier_expenses():
     query = db.session.query(
         Supplier.name,
         func.sum(Expense.nok_amount).label('total_amount')
-    ).join(Expense).filter(Expense.user_id == current_user.id)
+    ).join(Expense).filter(
+        Expense.user_id == current_user.id,
+        Expense.organization_id == current_user.organization_id
+    )
 
     trip_id = request.args.get('trip_id')
     project_id = request.args.get('project_id')
@@ -455,7 +560,10 @@ def category_expenses():
     query = db.session.query(
         ExpenseCategory.name,
         func.sum(Expense.nok_amount).label('total_amount')
-    ).join(Expense).filter(Expense.user_id == current_user.id)
+    ).join(Expense).filter(
+        Expense.user_id == current_user.id,
+        Expense.organization_id == current_user.organization_id
+    )
 
     trip_id = request.args.get('trip_id')
     project_id = request.args.get('project_id')
@@ -472,7 +580,10 @@ def category_expenses():
 @app.route('/api/expense_summary')
 @login_required
 def expense_summary():
-    query = Expense.query.filter_by(user_id=current_user.id)
+    query = Expense.query.filter_by(
+        user_id=current_user.id,
+        organization_id=current_user.organization_id
+    )
     
     trip_id = request.args.get('trip_id')
     project_id = request.args.get('project_id')
@@ -494,62 +605,3 @@ def expense_summary():
         'scope3_emissions': float(total_scope3),
         'total_emissions': float(total_scope1 + total_scope3)
     })
-
-@app.route('/organizations')
-@login_required
-@admin_required
-def organizations():
-    orgs = Organization.query.all()
-    return render_template('organizations.html', organizations=orgs)
-
-@app.route('/manage_organization_roles/<int:org_id>', methods=['GET', 'POST'])
-@login_required
-@admin_required
-def manage_organization_roles(org_id):
-    organization = Organization.query.get_or_404(org_id)
-    
-    if request.method == 'POST':
-        name = request.form['name']
-        new_role = Role(name=name, organization_id=org_id)
-        db.session.add(new_role)
-        db.session.commit()
-        flash('Role added successfully!', 'success')
-        return redirect(url_for('manage_organization_roles', org_id=org_id))
-    
-    roles = Role.query.filter_by(organization_id=org_id).all()
-    return render_template('manage_roles.html', organization=organization, roles=roles)
-
-@app.route('/update_user_role/<int:user_id>', methods=['POST'])
-@login_required
-@admin_required
-def update_user_role(user_id):
-    user = User.query.get_or_404(user_id)
-    role_id = request.form.get('role_id')
-    
-    if role_id:
-        role = Role.query.get_or_404(role_id)
-        if role.organization_id != user.organization_id:
-            flash('Invalid role selection.', 'danger')
-            return redirect(url_for('manage_users', org_id=user.organization_id))
-        
-        user.role_id = role.id
-        db.session.commit()
-        flash('User role updated successfully!', 'success')
-    
-    return redirect(url_for('manage_users', org_id=user.organization_id))
-
-@app.route('/manage_users/<int:org_id>')
-@login_required
-@admin_required
-def manage_users(org_id):
-    organization = Organization.query.get_or_404(org_id)
-    users = User.query.filter_by(organization_id=org_id).all()
-    roles = Role.query.filter_by(organization_id=org_id).all()
-    
-    stats = organization.get_statistics()
-    
-    return render_template('manage_users.html',
-                         organization=organization,
-                         users=users,
-                         roles=roles,
-                         stats=stats)
