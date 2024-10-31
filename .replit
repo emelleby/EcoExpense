@@ -59,6 +59,14 @@ args = "Create Initial Migration"
 task = "workflow.run"
 args = "Apply Migration"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Merge Heads"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Apply Migrations"
+
 [[workflows.workflow]]
 name = "Start Flask App"
 author = "agent"
@@ -215,6 +223,34 @@ args = "flask db migrate -m 'initial_migration'"
 
 [[workflows.workflow]]
 name = "Apply Migration"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db upgrade"
+
+[[workflows.workflow]]
+name = "Merge Heads"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "flask db merge heads -m 'merge_all_heads'"
+
+[[workflows.workflow]]
+name = "Apply Migrations"
 author = "agent"
 
 [workflows.workflow.metadata]
