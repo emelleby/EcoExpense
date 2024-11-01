@@ -7,6 +7,12 @@ from sqlalchemy import func, case, or_
 from utils import admin_required, same_organization_required
 import requests
 
+fuel_types = {
+    'Gasoline': {'scope1': 2.31, 'scope3': 0.61, 'kwh': 9.7},
+    'Diesel': {'scope1': 2.68, 'scope3': 0.63, 'kwh': 10.7},
+    'Electricity': {'scope1': 0, 'scope3': 0.05, 'kwh': 1},
+}
+
 # Authentication routes
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -254,7 +260,7 @@ def add_expense():
         amount = float(request.form.get('amount'))
         currency = request.form.get('currency')
         exchange_rate = float(request.form.get('exchange_rate'))
-        nok_amount = amount * exchange_rate
+        nok_amount = round(amount * exchange_rate, 2)
         date = datetime.strptime(request.form.get('date'), '%Y-%m-%d')
         description = request.form.get('description')
         category_id = request.form.get('category')
@@ -272,12 +278,41 @@ def add_expense():
         project_id = request.form.get('project') or None
         
         # Car distance and fuel specific fields
-        kilometers = float(request.form.get('kilometers', 0))
-        fuel_type = request.form.get('fuel_type', '')
-        fuel_amount_liters = float(request.form.get('fuel_amount_liters', 0))
-        scope1_co2_emissions = float(request.form.get('scope1_co2_emissions', 0))
-        scope3_co2_emissions = float(request.form.get('scope3_co2_emissions', 0))
-        kwh = float(request.form.get('kwh', 0))
+        # kilometers = float(request.form.get('kilometers', 0))
+        # fuel_type = request.form.get('fuel_type', '')
+        # fuel_amount_liters = float(request.form.get('fuel_amount_liters', 0))
+        # scope1_co2_emissions = float(request.form.get('scope1_co2_emissions', 0))
+        # scope3_co2_emissions = float(request.form.get('scope3_co2_emissions', 0))
+        # kwh = float(request.form.get('kwh', 0))
+
+        category = ExpenseCategory.query.get(category_id)
+
+        kilometers = 0.0
+        fuel_type = ''
+        fuel_amount_liters = 0.0
+        scope1_co2_emissions = 0.0
+        scope3_co2_emissions = 0.0
+        kwh = 0.0
+
+        # Calculate emissions
+        if category and category.name == 'Car - distance-based allowance':
+            kilometers = float(request.form.get('kilometers', '0') or '0')
+            fuel_type = request.form.get('fuel_type_dist', '')
+            fuel_amount_liters = float(request.form.get('car_fuel_consumption', '0') or '0')
+
+            if fuel_type in fuel_types:
+                total_fuel_consumption = (fuel_amount_liters * kilometers) / 100
+                scope1_co2_emissions = total_fuel_consumption * fuel_types[fuel_type]["scope1"]
+                scope3_co2_emissions = total_fuel_consumption * fuel_types[fuel_type]["scope3"]
+                kwh = total_fuel_consumption * fuel_types[fuel_type]["kwh"]
+        elif category and category.name == 'Fuel Expenses':
+            fuel_type = request.form.get('fuel_type', '')
+            fuel_amount_liters = float(request.form.get('fuel_amount', '0') or '0')
+
+            if fuel_type in fuel_types:
+                scope1_co2_emissions = fuel_amount_liters * fuel_types[fuel_type]["scope1"]
+                scope3_co2_emissions = fuel_amount_liters * fuel_types[fuel_type]["scope3"]
+                kwh = fuel_amount_liters * fuel_types[fuel_type]["kwh"]
         
         expense = Expense(
             amount=amount,
@@ -296,7 +331,7 @@ def add_expense():
             fuel_amount_liters=fuel_amount_liters,
             scope1_co2_emissions=scope1_co2_emissions,
             scope3_co2_emissions=scope3_co2_emissions,
-            kwh=kwh,
+            kwh=round(kwh, 2),
             # organization_id=current_user.organization_id
         )
         
@@ -311,11 +346,6 @@ def add_expense():
     trips = Trip.query.filter_by(user_id=current_user.id).all()
     projects = Project.query.filter_by(user_id=current_user.id).all()
     currencies = ['NOK', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD']
-    fuel_types = {
-        'gasoline': {'scope1': 2.31, 'scope3': 0.63, 'kwh': 8.76},
-        'diesel': {'scope1': 2.68, 'scope3': 0.71, 'kwh': 9.94},
-        'electricity': {'scope1': 0, 'scope3': 0.5, 'kwh': 1},
-    }
     
     return render_template('add_expense.html',
                          categories=categories,

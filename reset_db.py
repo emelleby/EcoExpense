@@ -16,6 +16,25 @@ from app import app, db
 from sqlalchemy import text  # Add this import at the top with other imports
 from models import User, Organization, Role, Supplier, Trip, Project, ExpenseCategory, Expense
 
+def init_categories():
+    with app.app_context():
+        categories = [
+            'Car - distance-based allowance',
+            'Fuel Expenses',
+            'Flight',
+            'Hotel',
+            'Food',
+            'Other'
+        ]
+
+        for category_name in categories:
+            if not ExpenseCategory.query.filter_by(name=category_name).first():
+                category = ExpenseCategory(name=category_name)
+                db.session.add(category)
+
+        db.session.commit()
+        print("Expense categories initialized")
+
 def reset_database():
     with app.app_context():
         try:
@@ -41,8 +60,10 @@ def reset_database():
                     print(f"Warning: Could not reset sequence {seq}: {str(e)}")
             # Recreate all tables
             db.create_all()
-            print("Recreated all tables")
+            init_categories()
+            print("Recreated all tables.")
             db.session.commit()
+            
             print("Database reset completed successfully")
         except Exception as e:
             print(f"Error resetting database: {str(e)}")
