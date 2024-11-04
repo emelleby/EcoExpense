@@ -9,6 +9,11 @@
         <input type="text" class="form-control" id="name" name="name" required>
     </div>
     <div class="mb-3">
+        <label for="regnr" class="form-label">Registration Number</label>
+        <input type="text" class="form-control" id="regnr" name="regnr" pattern="[0-9]{9}" required>
+        <div class="form-text">Enter a valid 9-digit organization registration number.</div>
+    </div>
+    <div class="mb-3">
         <label for="description" class="form-label">Description</label>
         <textarea class="form-control" id="description" name="description" rows="3"></textarea>
     </div>

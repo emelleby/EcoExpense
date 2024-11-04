@@ -90,48 +90,57 @@ def create_organization():
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description')
+        regnr = request.form.get('regnr')
         
         if Organization.query.filter_by(name=name).first():
             flash('Organization name already exists', 'danger')
             return redirect(url_for('create_organization'))
+            
+        if Organization.query.filter_by(regnr=regnr).first():
+            flash('Organization with this registration number already exists', 'danger')
+            return redirect(url_for('create_organization'))
         
-        organization = Organization(name=name, description=description)
-        db.session.add(organization)
-        db.session.commit()
-        
-        # Create default admin role
-        admin_role = Role(name='Admin', organization_id=organization.id)
-        db.session.add(admin_role)
-        db.session.commit()
-        
-        # Create user from session data
-        username = session.get('username')
-        email = session.get('email')
-        password = session.get('password')
-        
-        if username and email and password:
-            user = User(
-                username=username,
-                email=email,
-                organization_id=organization.id,
-                role_id=admin_role.id,
-                is_admin=True
-            )
-            user.set_password(password)
-            db.session.add(user)
+        try:
+            organization = Organization(name=name, description=description, regnr=regnr)
+            db.session.add(organization)
             db.session.commit()
+            
+            # Create default admin role
+            admin_role = Role(name='Admin', organization_id=organization.id)
+            db.session.add(admin_role)
+            db.session.commit()
+            
+            # Create user from session data
+            username = session.get('username')
+            email = session.get('email')
+            password = session.get('password')
+            
+            if username and email and password:
+                user = User(
+                    username=username,
+                    email=email,
+                    organization_id=organization.id,
+                    role_id=admin_role.id,
+                    is_admin=True
+                )
+                user.set_password(password)
+                db.session.add(user)
+                db.session.commit()
 
-            login_user(user)
+                login_user(user)
+                
+                session.pop('username', None)
+                session.pop('email', None)
+                session.pop('password', None)
+                
+                flash('Organization created successfully! Welcome to EcoExpenseTracker.', 'success')
+                return redirect(url_for('index'))
             
-            session.pop('username', None)
-            session.pop('email', None)
-            session.pop('password', None)
-            
-            flash('Organization created successfully! Welcome to EcoExpenseTracker.', 'success')
-            return redirect(url_for('index'))
-        
-        flash('Error creating user', 'danger')
-        return redirect(url_for('register'))
+            flash('Error creating user', 'danger')
+            return redirect(url_for('register'))
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('create_organization'))
     
     session['username'] = request.args.get('username')
     session['email'] = request.args.get('email')
@@ -265,7 +274,6 @@ def add_expense():
         description = request.form.get('description')
         category_id = request.form.get('category')
         
-        # Get or create supplier
         supplier_name = request.form.get('supplier')
         supplier = Supplier.query.filter_by(name=supplier_name, organization_id=current_user.organization_id).first()
         if not supplier:
@@ -273,17 +281,8 @@ def add_expense():
             db.session.add(supplier)
             db.session.commit()
         
-        # Optional fields
         trip_id = request.form.get('trip') or None
         project_id = request.form.get('project') or None
-        
-        # Car distance and fuel specific fields
-        # kilometers = float(request.form.get('kilometers', 0))
-        # fuel_type = request.form.get('fuel_type', '')
-        # fuel_amount_liters = float(request.form.get('fuel_amount_liters', 0))
-        # scope1_co2_emissions = float(request.form.get('scope1_co2_emissions', 0))
-        # scope3_co2_emissions = float(request.form.get('scope3_co2_emissions', 0))
-        # kwh = float(request.form.get('kwh', 0))
 
         category = ExpenseCategory.query.get(category_id)
 
@@ -294,7 +293,6 @@ def add_expense():
         scope3_co2_emissions = 0.0
         kwh = 0.0
 
-        # Calculate emissions
         if category and category.name == 'Car - distance-based allowance':
             kilometers = float(request.form.get('kilometers', '0') or '0')
             fuel_type = request.form.get('fuel_type_dist', '')
@@ -331,8 +329,7 @@ def add_expense():
             fuel_amount_liters=fuel_amount_liters,
             scope1_co2_emissions=scope1_co2_emissions,
             scope3_co2_emissions=scope3_co2_emissions,
-            kwh=round(kwh, 2),
-            # organization_id=current_user.organization_id
+            kwh=round(kwh, 2)
         )
         
         db.session.add(expense)
@@ -434,7 +431,6 @@ def expense_analysis():
     projects = Project.query.filter_by(user_id=current_user.id).all()
     return render_template('expense_analysis.html', trips=trips, projects=projects)
 
-# API routes for AJAX calls
 @app.route('/api/search_suppliers')
 @login_required
 def search_suppliers():
