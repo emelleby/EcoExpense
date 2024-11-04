@@ -238,6 +238,7 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python main.py"
+waitForPort = 5000
 
 [[workflows.workflow]]
 name = "Create Migration"
@@ -251,7 +252,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db revision -m 'update_organization_regnr_field'"
+args = "flask db revision -m 'remove_organization_id_from_expense_category'"
 
 [[workflows.workflow]]
 name = "Merge Migration Heads"
@@ -307,7 +308,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db upgrade heads"
+args = "flask db upgrade"
 
 [[workflows.workflow]]
 name = "Merge Heads"
