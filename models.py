@@ -6,6 +6,7 @@ from sqlalchemy.orm import validates
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    regnr = db.Column(db.String(9), nullable=False, unique=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -15,6 +16,12 @@ class Organization(db.Model):
         self.name = name
         self.description = description
 
+    @validates('regnr')
+    def validate_regnr(self, key, regnr):
+        if not regnr.isdigit() or len(regnr) != 9:
+            raise ValueError("Registration number must be exactly 9 digits")
+        return regnr
+        
     def get_statistics(self):
         total_users = self.users.count()
         total_expenses = sum(user.expenses.count() for user in self.users.all())
@@ -50,6 +57,13 @@ class User(UserMixin, db.Model):
     trips = db.relationship('Trip', backref='user', lazy='dynamic')
     projects = db.relationship('Project', backref='user', lazy='dynamic')
     is_admin = db.Column(db.Boolean, default=False)
+
+    def __init__(self, username, email, organization_id, role_id, is_admin=False):
+        self.username = username
+        self.email = email
+        self.organization_id = organization_id
+        self.role_id = role_id
+        self.is_admin = is_admin
 
     @validates('organization_id', 'role_id')
     def validate_required_fields(self, key, value):

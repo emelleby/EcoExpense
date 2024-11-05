@@ -55,7 +55,11 @@ def register():
             return redirect(url_for('register'))
         
         if organization_id == 'new':
-            return redirect(url_for('create_organization', username=username, email=email, password=password))
+            # Store data in session instead of URL parameters
+            session['username'] = username
+            session['email'] = email
+            session['password'] = password
+            return redirect(url_for('create_organization'))
         
         organization = Organization.query.get(organization_id)
         if not organization:
@@ -68,7 +72,8 @@ def register():
             db.session.add(role)
             db.session.commit()
         
-        user = User(username=username, email=email, organization_id=organization.id, role_id=role.id)
+        user = User(username=username, email=email, organization_id=organization.id, role_id=role.id,
+                   is_admin=False)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
@@ -87,56 +92,82 @@ def logout():
 
 @app.route('/create_organization', methods=['GET', 'POST'])
 def create_organization():
+    if current_user.is_authenticated:
+        flash('You are already part of an organization.', 'danger')
+        return redirect(url_for('index'))
+        
+    # Check if we have the required session data from register
+    if not all([
+        session.get('username'),
+        session.get('email'),
+        session.get('password')
+    ]):
+        flash('Please complete the registration process first.', 'danger')
+        return redirect(url_for('register'))
+
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description')
-        
+        regnr = request.form.get('regnr')
+
         if Organization.query.filter_by(name=name).first():
             flash('Organization name already exists', 'danger')
             return redirect(url_for('create_organization'))
-        
-        organization = Organization(name=name, description=description)
-        db.session.add(organization)
-        db.session.commit()
-        
-        # Create default admin role
-        admin_role = Role(name='Admin', organization_id=organization.id)
-        db.session.add(admin_role)
-        db.session.commit()
-        
-        # Create user from session data
-        username = session.get('username')
-        email = session.get('email')
-        password = session.get('password')
-        
-        if username and email and password:
-            user = User(
-                username=username,
-                email=email,
-                organization_id=organization.id,
-                role_id=admin_role.id,
-                is_admin=True
-            )
-            user.set_password(password)
-            db.session.add(user)
+
+        if Organization.query.filter_by(regnr=regnr).first():
+            flash('Organization with this registration number already exists', 'danger')
+            return redirect(url_for('create_organization'))
+
+        try:
+            organization = Organization(name=name, description=description)
+            organization.regnr = regnr  # Use the validator
+            db.session.add(organization)
             db.session.commit()
 
-            login_user(user)
-            
-            session.pop('username', None)
-            session.pop('email', None)
-            session.pop('password', None)
-            
-            flash('Organization created successfully! Welcome to EcoExpenseTracker.', 'success')
-            return redirect(url_for('index'))
-        
-        flash('Error creating user', 'danger')
-        return redirect(url_for('register'))
-    
-    session['username'] = request.args.get('username')
-    session['email'] = request.args.get('email')
-    session['password'] = request.args.get('password')
-    
+            # Create default admin role
+            admin_role = Role(name='Admin', organization_id=organization.id)
+            db.session.add(admin_role)
+            db.session.commit()
+
+            # Create user from session data
+            username = session.get('username')
+            email = session.get('email')
+            password = session.get('password')
+
+
+            # Create user from session data
+            username = session.get('username')
+            email = session.get('email')
+            password = session.get('password')
+
+            if username and email and password:
+                user = User(
+                    username=username,
+                    email=email,
+                    organization_id=organization.id,
+                    role_id=admin_role.id,
+                    is_admin=True
+                )
+                user.set_password(password)
+                db.session.add(user)
+                db.session.commit()
+
+                session.pop('username', None)
+                session.pop('email', None)
+                session.pop('password', None)
+
+                login_user(user)
+
+                flash('Organization created successfully! Welcome to EcoExpenseTracker.', 'success')
+                return redirect(url_for('index'))
+
+            flash('Error creating user', 'danger')
+            return redirect(url_for('register'))
+
+        except ValueError as e:
+            flash(str(e), 'danger')
+            return redirect(url_for('create_organization'))
+
     return render_template('create_organization.html')
 
 # Organization management routes
