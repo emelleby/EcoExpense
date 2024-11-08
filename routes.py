@@ -6,6 +6,17 @@ from datetime import datetime
 from sqlalchemy import func, case, or_
 from utils import admin_required, same_organization_required
 import requests
+import os
+from werkzeug.utils import secure_filename
+# Some logging for debugging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+UPLOAD_FOLDER = 'static/receipts'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 fuel_types = {
     'Gasoline': {'scope1': 2.31, 'scope3': 0.61, 'kwh': 9.7},
@@ -287,7 +298,9 @@ def expenses():
 @app.route('/add_expense', methods=['GET', 'POST'])
 @login_required
 def add_expense():
+
     if request.method == 'POST':
+        
         amount = float(request.form.get('amount'))
         currency = request.form.get('currency')
         exchange_rate = float(request.form.get('exchange_rate'))
@@ -365,7 +378,29 @@ def add_expense():
             kwh=round(kwh, 2),
             # organization_id=current_user.organization_id
         )
-        
+
+        # Handle receipt upload
+        if 'receipt' in request.files:
+
+            file = request.files['receipt']
+
+            if file and allowed_file(file.filename):
+                try:
+                    filename = secure_filename(f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{file.filename}")
+                    org_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], str(current_user.organization_id))
+                    filepath = os.path.join(org_upload_dir, filename)
+    
+                    # Ensure upload directory exists
+                    # os.makedirs(os.path.dirname(filepath), exist_ok=True)
+               
+                    os.makedirs(org_upload_dir, exist_ok=True)
+                    file.save(filepath)
+                    expense.receipt_filename = filename
+                    expense.receipt_path = filepath
+
+                except Exception as e:
+                    flash(f"Error saving file: {str(e)}", 'error')
+
         db.session.add(expense)
         db.session.commit()
         

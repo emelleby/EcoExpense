@@ -29,3 +29,10 @@ body {
 .summary-card .card-body {
     padding: 1rem;
 }
+
+#receipt-preview {
+    border: 1px solid #3082d5;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    background-color: #2d70b4;
+}

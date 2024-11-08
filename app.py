@@ -19,6 +19,15 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 
+# At the top level where you define constants
+UPLOAD_FOLDER = 'static/receipts'
+
+# After your app is created
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Also make sure the upload directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 db.init_app(app)
 migrate.init_app(app, db)
 

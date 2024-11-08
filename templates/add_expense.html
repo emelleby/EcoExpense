@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">Add New Expense</h1>
-<form method="POST" action="{{ url_for('add_expense') }}">
+<h1 class="mb-4">Add New Expense here</h1>
+<form method="POST" action="{{ url_for('add_expense') }}" enctype="multipart/form-data">
     <div class="mb-3">
         <label for="category" class="form-label">Category</label>
         <select class="form-select" id="category" name="category" required>
@@ -136,6 +136,20 @@
             {% endfor %}
         </select>
     </div>
+    <div class="mb-3">
+        <label for="receipt" class="form-label">Receipt Image</label>
+        <div class="input-group">
+            <input type="file" class="form-control" id="receipt" name="receipt" 
+                   accept="image/*" capture="environment">
+            <button class="btn btn-outline-secondary" type="button" id="camera-button">
+                <i class="bi bi-camera"></i> Use Camera
+            </button>
+        </div>
+        <div class="form-text">Upload a photo or take a picture of your receipt</div>
+        <div id="preview" class="mt-2" style="display: none;">
+            <img id="receipt-preview" class="img-fluid" style="max-height: 200px;">
+        </div>
+    </div>
     <button type="submit" class="btn btn-primary">Add Expense</button>
 </form>
 
@@ -157,21 +171,16 @@
 
     function calculateCarEmissions() {
         const fuelType = document.getElementById('fuel_type_dist').value;
-        console.log('Fuel type:', fuelType);  // Debug
-        console.log('Available fuel types:', Object.keys(fuelTypes));  // Debug
         
         const carConsumption = parseFloat(document.getElementById('car_fuel_consumption').value || '0');
         const kilometers = parseFloat(document.getElementById('kilometers').value || '0');
-
-        console.log('Consumption:', carConsumption);  // Debug
-        console.log('Kilometers:', kilometers);  // Debug
         
         let scope1Emissions = 0;
         let scope3Emissions = 0;
         let kwh = 0;
         
         if (fuelTypes[fuelType]) {
-            console.log('Found fuel type data:', fuelTypes[fuelType]);  // Debug
+
             // Calculate total fuel consumption based on km and consumption per 100km
             const totalFuelConsumption = (carConsumption * kilometers) / 100;
             scope1Emissions = totalFuelConsumption * fuelTypes[fuelType].scope1;
@@ -289,6 +298,24 @@
                 }
             });
         }
+    });
+</script>
+<script>
+    // Add to the existing script in add_expense.html
+    document.getElementById('receipt').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('preview').style.display = 'block';
+                document.getElementById('receipt-preview').src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    document.getElementById('camera-button').addEventListener('click', function() {
+        document.getElementById('receipt').click();
     });
 </script>
 {% endblock %}
