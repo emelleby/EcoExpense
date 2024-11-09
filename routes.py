@@ -1,7 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import login_user, login_required, logout_user, current_user
 from app import app, db
-from models import User, Supplier, Trip, Project, ExpenseCategory, Expense, Organization, Role
+from models import User, Supplier, Trip, Project, ExpenseCategory, Expense, Organization, Role, ReimbursementStatus
 from datetime import datetime
 from sqlalchemy import func, case, or_
 from utils import admin_required, same_organization_required
@@ -586,3 +586,76 @@ def expense_summary():
         'scope3_emissions': scope3_emissions,
         'total_emissions': scope1_emissions + scope3_emissions
     })
+
+@app.route('/request_reimbursement/<int:trip_id>', methods=['POST'])
+@login_required
+def request_reimbursement(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    # Verify user owns this trip
+    if trip.user_id != current_user.id:
+        flash('You can only request reimbursement for your own trips.', 'danger')
+        return redirect(url_for('trips'))
+
+    # Check if trip has any expenses
+    if not trip.expenses:
+        flash('Cannot request reimbursement for trips without expenses.', 'danger')
+        return redirect(url_for('trips'))
+
+    trip.reimbursement_status = ReimbursementStatus.PENDING
+    db.session.commit()
+
+    flash('Reimbursement request submitted successfully!', 'success')
+    return redirect(url_for('trips'))
+
+@app.route('/trip_expenses/<int:trip_id>')
+@login_required
+def trip_expenses(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    # Verify user owns this trip or is admin
+    if trip.user_id != current_user.id and not current_user.is_admin:
+        flash('You can only view expenses for your own trips.', 'danger')
+        return redirect(url_for('trips'))
+
+    return render_template('trip_expenses.html', trip=trip)
+
+@app.route('/admin/reimbursements')
+@login_required
+def admin_reimbursements():
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Get all pending reimbursement requests
+    pending_trips = Trip.query.filter_by(
+        reimbursement_status=ReimbursementStatus.PENDING
+    ).order_by(Trip.start_date.desc()).all()
+    
+    return render_template('admin_reimbursements.html', pending_trips=pending_trips)
+
+@app.route('/admin/process_reimbursement/<int:trip_id>', methods=['POST'])
+@login_required
+def process_reimbursement(trip_id):
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('index'))
+    
+    trip = Trip.query.get_or_404(trip_id)
+    action = request.form.get('action')
+    transaction_id = request.form.get('transaction_id')
+    
+    if action == 'approve':
+        trip.reimbursement_status = ReimbursementStatus.REIMBURSED
+        trip.transaction_id = transaction_id
+        # Mark all expenses as reimbursed
+        for expense in trip.expenses:
+            expense.reimbursed = True
+        flash(f'Reimbursement approved for trip: {trip.name}', 'success')
+    elif action == 'reject':
+        trip.reimbursement_status = ReimbursementStatus.NOT_REQUESTED
+        trip.transaction_id = None
+        flash(f'Reimbursement rejected for trip: {trip.name}', 'warning')
+    
+    db.session.commit()
+    return redirect(url_for('admin_reimbursements'))

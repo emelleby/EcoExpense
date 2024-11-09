@@ -5,9 +5,9 @@
 
 <div class="row">
     <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h2 class="h5 mb-0">Trip Management</h2>
+        <div class="card bg-secondary bg-opacity-25">
+            <div class="card-header bg-primary bg-opacity-25">
+                <h2 class="h5 mb-0">My trips</h2>
             </div>
             <div class="card-body">
                 <div class="mb-4">
@@ -36,34 +36,16 @@
                     {% else %}
                     <p>No trips found.</p>
                     {% endif %}
+                    <a type="button" class="btn btn-primary mb-3" href="{{ url_for('trips') }}">Manage Trips</a>
                 </div>
-
-                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('tripForm')">+ Add New Trip</button>
-                
-                <form method="POST" action="{{ url_for('trips') }}" class="mb-4" id="tripForm" style="display: none;">
-                    <h3 class="h6 mb-3">Add New Trip</h3>
-                    <div class="mb-3">
-                        <label for="trip_name" class="form-label">Name</label>
-                        <input type="text" class="form-control" id="trip_name" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="start_date" class="form-label">Start Date</label>
-                        <input type="date" class="form-control" id="start_date" name="start_date" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="end_date" class="form-label">End Date</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Trip</button>
-                </form>
             </div>
         </div>
     </div>
 
     <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h2 class="h5 mb-0">Project Management</h2>
+        <div class="card bg-secondary bg-opacity-25">
+            <div class="card-header bg-primary bg-opacity-25">
+                <h2 class="h5 mb-0">My Projects</h2>
             </div>
             <div class="card-body">
                 <div class="mb-4">
@@ -90,37 +72,11 @@
                     {% else %}
                     <p>No projects found.</p>
                     {% endif %}
+                    <a type="button" class="btn btn-primary mb-3" href="{{ url_for('projects') }}">Manage Projects</a>
                 </div>
-
-                <button type="button" class="btn btn-primary mb-3" onclick="toggleForm('projectForm')">+ Add New Project</button>
-                
-                <form method="POST" action="{{ url_for('projects') }}" class="mb-4" id="projectForm" style="display: none;">
-                    <h3 class="h6 mb-3">Add New Project</h3>
-                    <div class="mb-3">
-                        <label for="project_name" class="form-label">Name</label>
-                        <input type="text" class="form-control" id="project_name" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Add Project</button>
-                </form>
             </div>
         </div>
     </div>
 </div>
 
-<script>
-function toggleForm(formId) {
-    const form = document.getElementById(formId);
-    if (form) {
-        if (form.style.display === 'none' || form.style.display === '') {
-            form.style.display = 'block';
-        } else {
-            form.style.display = 'none';
-        }
-    }
-}
-</script>
 {% endblock %}

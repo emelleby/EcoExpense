@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Trip Expenses - {{ trip.name }}</h2>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Expenses List</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Amount (NOK)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in trip.expenses %}
+                        <tr>
+                            <td>{{ expense.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ expense.description }}</td>
+                            <td>{{ expense.category.name }}</td>
+                            <td>{{ "%.2f"|format(expense.nok_amount) }}</td>
+                            <td>
+                                {% if expense.reimbursed %}
+                                <span class="badge bg-success">Reimbursed</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3">Total</th>
+                            <th>{{ "%.2f"|format(trip.expenses|sum(attribute='nok_amount')) }} NOK</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

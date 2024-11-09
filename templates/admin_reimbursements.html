@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Manage Reimbursements</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Pending Reimbursements</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Trip Name</th>
+                            <th>Date Range</th>
+                            <th>Total Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trip in pending_trips %}
+                        <tr>
+                            <td>{{ trip.user.username }}</td>
+                            <td>{{ trip.name }}</td>
+                            <td>{{ trip.start_date.strftime('%Y-%m-%d') }} - {{ trip.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ "%.2f"|format(trip.expenses|sum(attribute='nok_amount')) }} NOK</td>
+                            <td>
+                                <span class="badge bg-warning">{{ trip.reimbursement_status.value }}</span>
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('process_reimbursement', trip_id=trip.id) }}" style="display: inline;">
+                                    <input type="text" name="transaction_id" placeholder="Transaction ID" required>
+                                    <button type="submit" name="action" value="approve" class="btn btn-sm btn-success">Approve</button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">Reject</button>
+                                </form>
+                                <a href="{{ url_for('trip_expenses', trip_id=trip.id) }}" class="btn btn-sm btn-info">View Details</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

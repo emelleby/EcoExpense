@@ -119,8 +119,8 @@
         <div class="form-text">Enter supplier name. If it doesn't exist, a new supplier will be created.</div>
     </div>
     <div class="mb-3">
-        <label for="trip" class="form-label">Trip (Optional)</label>
-        <select class="form-select" id="trip" name="trip">
+        <label for="trip" class="form-label">Trip (Required)</label>
+        <select class="form-select" id="trip" name="trip" required>
             <option value="">Select a trip</option>
             {% for trip in trips %}
             <option value="{{ trip.id }}">{{ trip.name }}</option>

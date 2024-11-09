@@ -3,6 +3,12 @@ from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import validates
+from enum import Enum
+
+class ReimbursementStatus(Enum):
+    NOT_REQUESTED = "NOT_REQUESTED"
+    PENDING = "PENDING"
+    REIMBURSED = "REIMBURSED"
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -99,6 +105,9 @@ class Trip(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     expenses = db.relationship('Expense', backref='trip', lazy=True)
+    # Add new field
+    reimbursement_status = db.Column(db.Enum(ReimbursementStatus), nullable=False, default=ReimbursementStatus.NOT_REQUESTED)
+    transaction_id = db.Column(db.String(100), nullable=True)
 
     def __init__(self, name, start_date, end_date, user_id):
         self.name = name
@@ -139,7 +148,7 @@ class Expense(db.Model):
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
     description = db.Column(db.Text)
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=False)
-    trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'))
+    trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=False)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     category_id = db.Column(db.Integer, db.ForeignKey('expense_category.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
